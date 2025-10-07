@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { collection, query, orderBy, limit, getDocs, where } from 'firebase/firestore';
 import { db } from '../firebase/config';
-import { useAuth } from '../context/AuthContext';
+import { useAuth } from '../contexts/AuthContext';
 
 export const useBluetoothData = (deviceId = null, limitCount = 500) => {
     const [data, setData] = useState([]);

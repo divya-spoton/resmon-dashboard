@@ -15,9 +15,9 @@ export const ThemeProvider = ({ children }) => {
     const [isDark, setIsDark] = useState(() => {
         try {
             const saved = localStorage.getItem('theme');
-            return saved ? saved === 'dark' : true; // Default to dark
+            return saved ? saved === 'dark' : false; // Default to light
         } catch (e) {
-            return true;
+            return false;
         }
     });
 

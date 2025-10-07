@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import { useAuth } from '../context/AuthContext';
-import { LogIn, AlertCircle } from 'lucide-react';
-import { useTheme } from '../context/ThemeContext';
+import { useAuth } from '../contexts/AuthContext';
+import { LogIn, AlertCircle, Lock, Mail } from 'lucide-react';
+import { useTheme } from '../contexts/ThemeContext';
 
 const Login = () => {
     const [email, setEmail] = useState('');
@@ -45,24 +45,32 @@ const Login = () => {
                 <form onSubmit={handleSubmit} className="space-y-4">
                     <div>
                         <label className={`block text-sm font-medium ${colors.textTertiary} mb-2`}>Email</label>
-                        <input
-                            type="email"
-                            value={email}
-                            onChange={(e) => setEmail(e.target.value)}
-                            className={`w-full ${colors.inputBg} border ${colors.inputBorder} ${colors.text} rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-cyan-500`}
-                            required
-                        />
+                        <div className="relative">
+                            <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-slate-500" />
+                            <input
+                                type="email"
+                                value={email}
+                                onChange={(e) => setEmail(e.target.value)}
+                                placeholder="account@example.com"
+                                className={`w-full ${colors.inputBg} border ${colors.inputBorder} ${colors.text} rounded-lg pl-10 pr-4 py-3 focus:outline-none focus:ring-2 focus:ring-cyan-500`}
+                                required
+                            />
+                        </div>
                     </div>
 
                     <div>
                         <label className={`block text-sm font-medium ${colors.textTertiary} mb-2`}>Password</label>
-                        <input
-                            type="password"
-                            value={password}
-                            onChange={(e) => setPassword(e.target.value)}
-                            className={`w-full ${colors.inputBg} border ${colors.inputBorder} ${colors.text} rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-cyan-500`}
-                            required
-                        />
+                        <div className="relative">
+                            <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-slate-500" />
+                            <input
+                                type="password"
+                                value={password}
+                                onChange={(e) => setPassword(e.target.value)}
+                                className={`w-full ${colors.inputBg} border ${colors.inputBorder} ${colors.text} rounded-lg pl-10 pr-4 py-3 focus:outline-none focus:ring-2 focus:ring-cyan-500`}
+                                placeholder="••••••••"
+                                required
+                            />
+                        </div>
                     </div>
 
                     <button

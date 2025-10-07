@@ -1,55 +1,18 @@
 import React, { useState, useMemo } from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { Activity, Battery, AlertCircle, TrendingUp, Droplets, Calendar } from 'lucide-react';
-import { useAuth } from '../contexts/AuthContext';
-import { useAuth } from '../context/AuthContext';
-import { LogOut, Users as UsersIcon, Sun, Moon } from 'lucide-react';
-import UserManagement from './UserManagement';
-import { useTheme } from '../context/ThemeContext';
+import { useTheme } from '../contexts/ThemeContext';
+import { useBluetoothData } from '../hooks/useFirebaseData';
+import mockData from '../utils/mockData'
 
-// Mock data generator - replace with actual Firebase data
-const generateMockData = () => {
-    const data = [];
-    const devices = ['2C:CF:67:B6:DA:16', '2C:CF:67:D1:B9:FE'];
+const Dashboard = ({ data: propData }) => {
+    // const { data: fetchedData, loading, error } = useBluetoothData();
+    // const data = propData || fetchedData;
+    const [data] = useState(mockData);
 
-    for (let i = 0; i < 50; i++) {
-        const date = new Date();
-        date.setDate(date.getDate() - i);
-
-        data.push({
-            id: `doc_${i}`,
-            device_id: devices[Math.floor(Math.random() * devices.length)],
-            device_name: `Pico ${devices[Math.floor(Math.random() * devices.length)]}`,
-            data_battery_percentage: 100 - Math.floor(Math.random() * 20),
-            data_check_element_resistance: 80,
-            data_corrosion_rate: (Math.random() * 2 + 0.5).toFixed(3),
-            data_metal_loss: (Math.random() * 0.015).toFixed(6),
-            data_probe_resistance: 160 + Math.random() * 30,
-            data_probe_status: Math.random() > 0.3 ? 1 : 0,
-            data_reference_resistance: 80,
-            data_timestamp: date,
-            timestamp_upload: new Date(date.getTime() + 60000)
-        });
-    }
-
-    return data.sort((a, b) => b.data_timestamp - a.data_timestamp);
-};
-
-const Dashboard = () => {
-    const [data] = useState(generateMockData());
     const [selectedDevice, setSelectedDevice] = useState('all');
     const [timeRange, setTimeRange] = useState('7days');
-    const { currentUser, userRole, logout, permissions } = useAuth();
-    const [showUserManagement, setShowUserManagement] = useState(false);
     const { isDark, toggleTheme, colors } = useTheme();
-
-    const handleLogout = async () => {
-        try {
-            await logout();
-        } catch (err) {
-            console.error('Failed to logout:', err);
-        }
-    };
 
     // Get unique devices
     const devices = useMemo(() => {
@@ -113,61 +76,38 @@ const Dashboard = () => {
         }));
     }, [filteredData]);
 
-    return (
-        <div className={`min-h-screen ${colors.bg}`}>
-            {/* Header */}
-            <div className={`${colors.cardBg} backdrop-blur-sm border-b ${colors.cardBorder} sticky top-0 z-10`}>
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-                    <div className="flex items-center justify-between">
-                        <div className="flex items-center space-x-3">
-                            <Droplets className="w-8 h-8 text-cyan-400" />
-                            <div>
-                                <h1 className={`text-2xl font-bold ${colors.text}`}>Pipeline Monitoring System</h1>
-                                <p className={`text-sm ${colors.textTertiary}`}>Real-time corrosion tracking &amp; analysis</p>
-                            </div>
-                        </div>
+    // if (loading) {
+    //     return (
+    //         <div className={`min-h-screen ${colors.bg} flex items-center justify-center`}>
+    //             <div className={`${colors.text}`}>Loading data...</div>
+    //         </div>
+    //     );
+    // }
 
-                        <div className="flex items-center gap-4">
-                            <div className="text-right mr-4">
-                                <p className={`text-sm ${colors.text}`}>{currentUser?.email}</p>
-                                <p className={`text-xs ${colors.textTertiary} capitalize`}>{userRole}</p>
-                            </div>
+    // if (error) {
+    //     return (
+    //         <div className={`min-h-screen ${colors.bg} flex items-center justify-center`}>
+    //             <div className="text-red-400">Error loading data: {error}</div>
+    //         </div>
+    //     );
+    // }
 
-                            {userRole === 'admin' && (
-                                <button
-                                    onClick={() => setShowUserManagement(!showUserManagement)}
-                                    className="flex items-center gap-2 bg-purple-500/20 text-purple-400 border border-purple-500/30 px-3 py-2 rounded-lg hover:bg-purple-500/30 transition-colors"
-                                >
-                                    <UsersIcon className="w-4 h-4" />
-                                    Users
-                                </button>
-                            )}
-
-                            <button
-                                onClick={toggleTheme}
-                                className={`flex items-center gap-2 ${colors.cardBg} ${colors.text} border ${colors.cardBorder} px-3 py-2 rounded-lg hover:opacity-80 transition-opacity`}
-                            >
-                                {isDark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
-                            </button>
-
-                            <button
-                                onClick={logout}
-                                className="flex items-center gap-2 bg-red-500/20 text-red-400 border border-red-500/30 px-3 py-2 rounded-lg hover:bg-red-500/30 transition-colors"
-                            >
-                                <LogOut className="w-4 h-4" />
-                                Logout
-                            </button>
-                        </div>
+    if (!data || data.length === 0) {
+        return (
+            <div className={`min-h-screen ${colors.bg}`}>
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+                    <div className={`${colors.cardBg} rounded-xl p-12 text-center border ${colors.cardBorder}`}>
+                        <Droplets className={`w-16 h-16 ${colors.textTertiary} mx-auto mb-4`} />
+                        <h3 className={`text-xl font-semibold ${colors.text} mb-2`}>No Data Available</h3>
+                        <p className={`${colors.textTertiary}`}>There are no readings from any devices yet.</p>
                     </div>
                 </div>
             </div>
+        );
+    }
 
-            {showUserManagement && userRole === 'admin' && (
-                <div className="mb-6">
-                    <UserManagement />
-                </div>
-            )}
-
+    return (
+        <div className={`min-h-screen ${colors.bg}`}>
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
                 {/* Filters */}
                 <div className="mb-6 flex flex-wrap gap-4">
