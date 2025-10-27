@@ -1,0 +1,12 @@
+i want to create a dashboard using react which shows the data from firebase
+basically a pico device will records some oil pipeline data and someone every few weeks goes and uploads via bluetooh or something and data comes in firebase (comes as separate documents maybe 1000 or so, not sure)
+so basically i have to make a dashboard to nicely properly in good ui and ux show the data so the client
+following features are required:
+
+1) the main company might give the app and dashboard to different companies. each company will have their own devices and data and shoudnt mix all the data. each can have admin having all access and data and other users (having different access to data), basically i want one person to be admin and that person will have ability to register other users and assign them roles and each role might have different permissions views or etc.
+
+2) csv feature and data export, alerts for abnormal readings.
+
+i have code for this requirements. i want you to analyze code and if any changes are required, bugs/inconsistencies are found then
+just give me the code changes to update, remove or add, dont rewrite any code if not required
+
