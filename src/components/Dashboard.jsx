@@ -6,9 +6,9 @@ import { useBluetoothData } from '../hooks/useFirebaseData';
 import mockData from '../utils/mockData'
 
 const Dashboard = ({ data: propData }) => {
-    // const { data: fetchedData, loading, error } = useBluetoothData();
-    // const data = propData || fetchedData;
-    const [data] = useState(mockData);
+    const { data: fetchedData, loading, error } = useBluetoothData();
+    const data = propData || fetchedData;
+    // const [data] = useState(mockData);
 
     const [selectedDevice, setSelectedDevice] = useState('all');
     const [timeRange, setTimeRange] = useState('7days');
@@ -76,21 +76,21 @@ const Dashboard = ({ data: propData }) => {
         }));
     }, [filteredData]);
 
-    // if (loading) {
-    //     return (
-    //         <div className={`min-h-screen ${colors.bg} flex items-center justify-center`}>
-    //             <div className={`${colors.text}`}>Loading data...</div>
-    //         </div>
-    //     );
-    // }
+    if (loading) {
+        return (
+            <div className={`min-h-screen ${colors.bg} flex items-center justify-center`}>
+                <div className={`${colors.text}`}>Loading data...</div>
+            </div>
+        );
+    }
 
-    // if (error) {
-    //     return (
-    //         <div className={`min-h-screen ${colors.bg} flex items-center justify-center`}>
-    //             <div className="text-red-400">Error loading data: {error}</div>
-    //         </div>
-    //     );
-    // }
+    if (error) {
+        return (
+            <div className={`min-h-screen ${colors.bg} flex items-center justify-center`}>
+                <div className="text-red-400">Error loading data: {error}</div>
+            </div>
+        );
+    }
 
     if (!data || data.length === 0) {
         return (

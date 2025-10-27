@@ -2,6 +2,42 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { Users, UserPlus, Trash2, Edit, X } from 'lucide-react';
 import { useTheme } from '../contexts/ThemeContext';
+import { useDeviceConfig } from '../hooks/useFirebaseData';
+
+
+/**
+ * 
+## Setup Instructions for Admin Account
+
+### Create First Admin User Manually
+
+Since you need an admin to create other users, you'll need to create the first admin manually:
+
+1. **Enable Email/Password Authentication in Firebase Console:**
+   - Go to Firebase Console → Authentication → Sign-in method
+   - Enable Email/Password provider
+
+2. **Create admin user in Firebase Console:**
+   - Go to Authentication → Users → Add user
+   - Add email and password
+
+3. **Add admin document in Firestore:**
+   - Go to Firestore Database → Create collection "users"
+   - Create document with ID matching the user's UID from Authentication
+   - Add these fields:
+```
+     email: "admin@yourdomain.com"
+     displayName: "Admin User"
+     role: "admin"
+     permissions: {
+       canViewAllDevices: true,
+       canExportData: true,
+       canManageUsers: true,
+       assignedDevices: []
+     }
+     createdAt: [current timestamp]
+     createdBy: "system"
+ */
 
 const UserManagement = () => {
     const { colors } = useTheme();
@@ -20,17 +56,39 @@ const UserManagement = () => {
         canManageUsers: false,
         assignedDevices: []
     });
+    const [isLoading, setIsLoading] = useState(false);
+    const [error, setError] = useState(null);
 
     useEffect(() => {
-        loadUsers();
-    }, []);
+        let mounted = true;
+        (async () => {
+            try {
+                setIsLoading(true);
+                const usersList = await getAllUsers();
+                if (mounted) setUsers(Array.isArray(usersList) ? usersList : []);
+            } catch (err) {
+                console.error('Error loading users on mount', err);
+                if (mounted) setError(err?.message || 'Failed to load users');
+            } finally {
+                if (mounted) setIsLoading(false);
+            }
+        })();
+        return () => { mounted = false; };
+    }, [getAllUsers]);
+
 
     const loadUsers = async () => {
+        setIsLoading(true);
+        setError(null);
         try {
             const usersList = await getAllUsers();
-            setUsers(usersList);
+            // make sure we always set an array
+            setUsers(Array.isArray(usersList) ? usersList : []);
         } catch (err) {
             console.error('Error loading users:', err);
+            setError(err?.message || 'Failed to load users');
+        } finally {
+            setIsLoading(false);
         }
     };
 
@@ -39,7 +97,18 @@ const UserManagement = () => {
 
         try {
             if (editingUser) {
-                await updateUserRole(editingUser.id, formData.role, {
+                const userId = editingUser.id || editingUser.uid;
+                // if we're changing an admin -> non-admin, ensure there's at least one other admin
+                const currentlyAdmin = editingUser.role === 'admin';
+                const willBeAdmin = formData.role === 'admin';
+                const adminCount = users.filter(u => u.role === 'admin').length;
+
+                if (currentlyAdmin && !willBeAdmin && adminCount <= 1) {
+                    alert('There must be at least one admin account. Create another admin before demoting this user.');
+                    return;
+                }
+                // pass displayName if your backend supports it (common case)
+                await updateUserRole(userId, formData.role, {
                     canViewAllDevices: formData.canViewAllDevices,
                     canExportData: formData.canExportData,
                     canManageUsers: formData.canManageUsers,
@@ -63,20 +132,27 @@ const UserManagement = () => {
             setShowModal(false);
             setEditingUser(null);
             resetForm();
-            loadUsers();
+            await loadUsers(); // await to ensure UI refresh before continuing
         } catch (err) {
-            alert(err.message);
+            console.error(err);
+            alert(err?.message || 'Something went wrong while saving user');
         }
     };
 
-    const handleDelete = async (userId) => {
-        if (window.confirm('Are you sure you want to delete this user?')) {
+    const handleDelete = async (userIdOrObj) => {
+        const id = userIdOrObj?.id || userIdOrObj?.uid || userIdOrObj;
+        if (!id) return;
+        if (id === currentUser?.uid) {
+            alert('You cannot delete your own account');
+            return;
+        }
+        if (!window.confirm('Are you sure you want to delete this user?')) return;
             try {
-                await deleteUser(userId);
-                loadUsers();
+            await deleteUser(id);
+            await loadUsers();
             } catch (err) {
-                alert(err.message);
-            }
+            console.error('Delete failed', err);
+            alert(err?.message || 'Failed to delete user');
         }
     };
 
@@ -128,6 +204,7 @@ const UserManagement = () => {
                             setEditingUser(null);
                             setShowModal(true);
                         }}
+                        disabled={isLoading || configsLoading}
                         className="flex items-center gap-2 bg-cyan-500 hover:bg-cyan-600 text-white px-4 py-2 rounded-lg transition-colors"
                     >
                         <UserPlus className="w-4 h-4" />
