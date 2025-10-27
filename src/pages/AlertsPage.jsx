@@ -5,19 +5,33 @@ import { collection, addDoc, query, orderBy, getDocs, updateDoc, doc } from 'fir
 import { db } from '../firebase/config';
 import { AlertTriangle, Bell, BellOff, Settings, Save } from 'lucide-react';
 
+/**
+ * 
+ * Detects "current" alerts by scanning recent telemetry (bluetooth_data) against thresholds (alertConfig). These are not stored anywhere by default — they’re just detected in memory from incoming data and shown as Active Alerts.
+
+Save button: stores a chosen active alert into Firestore collection alerts. That makes it persistent and visible in the Alert History.
+
+Alert History lists alerts already saved in Firestore (persisted). You can Acknowledge a saved alert — that flips acknowledged to true in Firestore.
+
+Configuration (alertConfig) is stored locally (localStorage) in your code — it drives the detection thresholds. If you want team-wide thresholds, you should store config in Firestore instead.
+
+Key differences — Current Alerts vs Alert History
+
+Current Alerts: ephemeral, generated on-the-fly from latest telemetry and alertConfig. They’re your real-time detections (no persistence).
+
+Alert History: persisted records in Firestore (alerts collection). They include metadata (timestamp, acknowledged status) and are used for auditing, tracking, or notifying users later.
+
+ */
+
 const SafeDate = ({ date }) => <>{date ? new Date(date).toLocaleString() : '—'}</>;
-const SafeVal = ({ val, fixed = null, suffix = '' }) => {
-    if (val === undefined || val === null || Number.isNaN(Number(val))) return <>—</>;
-    return <>{fixed !== null ? Number(val).toFixed(fixed) : val}{suffix}</>;
-};
 
 const AlertsPage = () => {
     const { colors } = useTheme();
     const { data = [], loading: dataLoading, error: dataError } = useBluetoothData();
     const [alertConfig, setAlertConfig] = useState({
-        corrosionRateThreshold: 2.0,
-        metalLossThreshold: 0.01,
-        batteryLowThreshold: 20,
+        corrosionRateThreshold: 10.0,
+        metalLossThreshold: 0.38820213079452515,
+        batteryLowThreshold: 80,
         probeInactiveAlert: true
     });
 
@@ -277,7 +291,7 @@ const AlertsPage = () => {
 
             {/* Current Active Alerts */}
             <div className="mb-6">
-                <h2 className={`text-xl font-semibold ${colors.text} mb-4`}>Active Alerts ({currentAlerts.length})</h2>
+
 
                 {dataLoading && !currentAlerts.length ?
                     <>
@@ -285,44 +299,47 @@ const AlertsPage = () => {
                             <div className="animate-pulse text-sm">Loading devices…</div>
                         </div>
                     </> : (
-                        <div className="space-y-3">
-                            {currentAlerts.length === 0 ? (
-                                <div className={`${colors.cardBg} border ${colors.cardBorder} rounded-xl p-8 text-center`}>
-                                    <BellOff className={`w-12 h-12 ${colors.textSecondary} mx-auto mb-3`} />
-                                    <p className={`${colors.textSecondary}`}>No active alerts</p>
-                                </div>
-                            ) : (
-                                currentAlerts.map((alert, index) => {
-                                    const isSaving = savingAlertIds.includes(alert.id);
-                                    const savedRecently = alreadySavedRecently(alert);
-                                    return (
-                                        <div key={index} className={`${colors.cardBg} border ${getAlertColor(alert.type)} rounded-xl p-4`}>
-                                            <div className="flex items-start gap-4">
-                                                <AlertTriangle className={`w-5 h-5 ${getAlertIcon(alert.type)} mt-0.5`} />
-                                                <div className="flex-1">
-                                                    <div className="flex items-start justify-between">
-                                                        <div>
-                                                            <p className={`font-semibold ${colors.text}`}>{alert.message}</p>
-                                                            <p className={`text-sm ${colors.textSecondary} mt-1`}>Device: {alert.device} ({alert.deviceId})</p>
-                                                            <p className={`text-xs ${colors.textSecondary} mt-1`}><SafeDate date={alert.timestamp} /></p>
-                                                        </div>
-                                                        <div className="flex flex-col items-end gap-2">
-                                                            <button
-                                                                onClick={() => saveAlert(alert)}
-                                                                disabled={isSaving || savedRecently}
-                                                                className={`text-sm font-medium ${isSaving ? 'opacity-60 cursor-not-allowed' : 'text-cyan-400 hover:text-cyan-300'}`}
-                                                            >
-                                                                {isSaving ? 'Saving…' : (savedRecently ? 'Saved' : 'Save')}
-                                                            </button>
+                        <>
+                            <h2 className={`text-xl font-semibold ${colors.text} mb-4`}>Active Alerts ({currentAlerts.length})</h2>
+                            <div className="space-y-3">
+                                {currentAlerts.length === 0 ? (
+                                    <div className={`${colors.cardBg} border ${colors.cardBorder} rounded-xl p-8 text-center`}>
+                                        <BellOff className={`w-12 h-12 ${colors.textSecondary} mx-auto mb-3`} />
+                                        <p className={`${colors.textSecondary}`}>No active alerts</p>
+                                    </div>
+                                ) : (
+                                    currentAlerts.map((alert, index) => {
+                                        const isSaving = savingAlertIds.includes(alert.id);
+                                        const savedRecently = alreadySavedRecently(alert);
+                                        return (
+                                            <div key={index} className={`${colors.cardBg} border ${getAlertColor(alert.type)} rounded-xl p-4`}>
+                                                <div className="flex items-start gap-4">
+                                                    <AlertTriangle className={`w-5 h-5 ${getAlertIcon(alert.type)} mt-0.5`} />
+                                                    <div className="flex-1">
+                                                        <div className="flex items-start justify-between">
+                                                            <div>
+                                                                <p className={`font-semibold ${colors.text}`}>{alert.message}</p>
+                                                                <p className={`text-sm ${colors.textSecondary} mt-1`}>Device: {alert.device} ({alert.deviceId})</p>
+                                                                <p className={`text-xs ${colors.textSecondary} mt-1`}><SafeDate date={alert.timestamp} /></p>
+                                                            </div>
+                                                            <div className="flex flex-col items-end gap-2">
+                                                                <button
+                                                                    onClick={() => saveAlert(alert)}
+                                                                    disabled={isSaving || savedRecently}
+                                                                    className={`text-sm font-medium ${isSaving ? 'opacity-60 cursor-not-allowed' : 'text-cyan-400 hover:text-cyan-300'}`}
+                                                                >
+                                                                    {isSaving ? 'Saving…' : (savedRecently ? 'Saved' : 'Save')}
+                                                                </button>
+                                                            </div>
                                                         </div>
                                                     </div>
                                                 </div>
                                             </div>
-                                        </div>
-                                    );
-                                })
-                            )}
-                        </div>
+                                        );
+                                    })
+                                )}
+                            </div>
+                        </>
                     )
                 }
             </div>

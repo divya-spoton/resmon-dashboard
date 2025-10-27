@@ -1,4 +1,4 @@
-import React, { createContext, useState, useEffect, useContext } from 'react';
+import React, { createContext, useState, useEffect, useContext, useMemo } from 'react';
 import {
     signInWithEmailAndPassword,
     signOut,
@@ -107,7 +107,7 @@ export const AuthProvider = ({ children }) => {
         await deleteDoc(doc(db, 'users', userId));
     };
 
-    const value = {
+    const value = useMemo(() => ({
         currentUser,
         userRole,
         permissions,
@@ -117,7 +117,7 @@ export const AuthProvider = ({ children }) => {
         getAllUsers,
         updateUserRole,
         deleteUser
-    };
+    }), [currentUser, userRole, permissions]);
 
     return (
         <AuthContext.Provider value={value}>

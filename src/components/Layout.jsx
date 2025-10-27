@@ -17,7 +17,7 @@ import {
 } from 'lucide-react';
 
 const Layout = () => {
-    const { currentUser, userRole, logout } = useAuth();
+    const { currentUser, userRole, logout, permissions } = useAuth();
     const { isDark, toggleTheme, colors } = useTheme();
     const navigate = useNavigate();
     const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -33,10 +33,16 @@ const Layout = () => {
         { path: '/alerts', icon: AlertTriangle, label: 'Alerts', roles: ['admin', 'manager', 'worker'] },
         { path: '/export', icon: Download, label: 'Export Data', roles: ['admin', 'manager'], permission: 'canExportData' },
         { path: '/device-config', icon: Settings, label: 'Configuration', roles: ['admin', 'manager'] },
-        { path: '/users', icon: Users, label: 'User Management', roles: ['admin'] }
+        // { path: '/users', icon: Users, label: 'User Management', roles: ['admin'] }
     ];
 
-    const filteredNavItems = navItems.filter(item => item.roles.includes(userRole));
+    const filteredNavItems = navItems.filter(item => {
+        if (!userRole) return false;
+        if (!item.roles.includes(userRole)) return false;
+        if (item.permission && (!permissions || !permissions[item.permission])) return false;
+        return true;
+    });
+
 
     return (
         <div className={`min-h-screen ${colors.bg}`}>

@@ -7,6 +7,14 @@ following features are required:
 
 2) csv feature and data export, alerts for abnormal readings.
 
-i have code for this requirements. i want you to analyze code and if any changes are required, bugs/inconsistencies are found then
-just give me the code changes to update, remove or add, dont rewrite any code if not required
+some inconsistencies improvements from my side: currently loading and error states are not used consistently. some places we just directly start calculating and processing data without using loading state to user. and we are on different pages fetching same data again and again. this is leading to many reads which is increasing bills. 
+
+for now ignore the main company distributing to multiple company part. just want to make it work for one company for now.  
+i am sharing the current code i have (only important parts not the imports or other non-required code). i want you to analyze code and if any changes are required, bugs/inconsistencies are found then
+just give me the code snippets and changes to update, remove or add, dont rewrite any code if not required
+
+====================================
+99:
+https://chatgpt.com/c/68e60bdb-629c-8320-bbfd-57116e8220a2
+https://chatgpt.com/c/68e4efb0-2360-8321-9c8e-28ef3fbbe6da
 

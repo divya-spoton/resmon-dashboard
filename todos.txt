@@ -1,0 +1,23 @@
+1. Admin user creation on client signs out admin — security/logic bug
+Files: src/contexts/AuthContext.jsx (registerUser function)
+
+Problem: deleteUser in the client only deletes the Firestore doc (deleteDoc) — it does not delete the Auth user in Firebase Auth. That must be done with the Admin SDK (Cloud Function).
+
+Fix: Use the Cloud Function / Admin SDK flows we discussed earlier:
+
+createUserAsAdmin callable function that calls admin.auth().createUser(...) and writes users/{uid}.
+
+deleteUserAsAdmin callable function that calls admin.auth().deleteUser(uid) and deletes the Firestore doc.
+==================================================================================================================
+2. 'in' operator size limit — Firestore where('field', 'in', array) supports max 10 elements. If permissions.assignedDevices.length > 10 your query will throw.
+Fix: If assignedDevices.length > 10 chunk the array into batches of up to 10 and run multiple queries, then merge results. (Or use a different data model / index.)
+Where to change: In useBluetoothData inside the else branch that handles assignedDevices, add a check for assignedDevices.length > 10 and implement chunking (fetch multiple queries with Promise.all).
+==================================================================================================================
+3. Problem: You check if (userRole !== 'admin') throw new Error('Only admins can register users') — this is purely client-side and can be bypassed. You already have server-side Firestore; but you must enforce role/permission rules in Firestore security rules or use server-side checks.
+What to add:
+
+Server-side enforcement: Ensure Firestore security rules deny non-admins from writing to users/{uid} documents or creating them with roles. Or perform user creation via Cloud Function (see above) with Admin SDK.
+
+Where to change: Update project Firestore rules (not in this repo) or add Cloud Function.
+==================================================================================================================
+4. pagination : 99 acc chat : https://chatgpt.com/c/68e60bdb-629c-8320-bbfd-57116e8220a2
