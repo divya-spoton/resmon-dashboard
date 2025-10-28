@@ -7,7 +7,6 @@ import { useData } from '../contexts/DataContext';
 const Dashboard = ({ data: propData }) => {
     const { bluetoothData: fetchedData, loading, error } = useData();
     const data = propData || fetchedData;
-    // const [data] = useState(mockData);
 
     const [selectedDevice, setSelectedDevice] = useState('all');
     const [timeRange, setTimeRange] = useState('7days');
@@ -15,15 +14,23 @@ const Dashboard = ({ data: propData }) => {
     const [dateFrom, setDateFrom] = useState('');
     const [dateTo, setDateTo] = useState('');
 
+    // Helpers: safe parse + formatting
+    const parseNumberSafe = (v) => {
+        const n = Number(v);
+        return Number.isFinite(n) ? n : 0;
+    };
+    const formatCorrosion = (v) => parseNumberSafe(v).toFixed(3); // 3 decimals (mpy)
+    const formatMetalLoss = (v) => parseNumberSafe(v).toFixed(6); // 6 decimals (mils)
+
     // Get unique devices
     const devices = useMemo(() => {
-        const uniqueDevices = [...new Set(data.map(d => d.device_id))];
+        const uniqueDevices = [...new Set((data || []).map(d => d.device_id))];
         return uniqueDevices;
     }, [data]);
 
     // Filter data based on selections
     const filteredData = useMemo(() => {
-        let filtered = data;
+        let filtered = data || [];
 
         if (selectedDevice !== 'all') {
             filtered = filtered.filter(d => d.device_id === selectedDevice);
@@ -32,21 +39,23 @@ const Dashboard = ({ data: propData }) => {
         if (dateFrom) {
             const fromDate = new Date(dateFrom);
             fromDate.setHours(0, 0, 0, 0);
-            filtered = filtered.filter(d => d.data_timestamp >= fromDate);
+            filtered = filtered.filter(d => new Date(d.data_timestamp) >= fromDate);
         }
 
         if (dateTo) {
             const toDate = new Date(dateTo);
             toDate.setHours(23, 59, 59, 999);
-            filtered = filtered.filter(d => d.data_timestamp <= toDate);
+            filtered = filtered.filter(d => new Date(d.data_timestamp) <= toDate);
+            console.log('Filtering to date:', toDate);
         }
 
         const now = new Date();
         const cutoffDate = new Date();
 
+
         switch (timeRange) {
             case '24hours':
-                cutoffDate.setHours(now.getHours() - 24);
+                cutoffDate.setTime(now.getTime() - 24 * 60 * 60 * 1000);
                 break;
             case '7days':
                 cutoffDate.setDate(now.getDate() - 7);
@@ -58,21 +67,26 @@ const Dashboard = ({ data: propData }) => {
                 return filtered;
         }
 
-        return filtered.filter(d => d.data_timestamp >= cutoffDate);
+
+        return filtered.filter(d => new Date(d.data_timestamp) >= cutoffDate);
     }, [data, selectedDevice, timeRange, dateFrom, dateTo]);
 
     // Calculate statistics
     const stats = useMemo(() => {
-        if (filteredData.length === 0) return null;
+        if (!filteredData || filteredData.length === 0) return null;
 
-        const avgCorrosion = (filteredData.reduce((sum, d) => sum + parseFloat(d.data_corrosion_rate), 0) / filteredData.length).toFixed(3);
-        const avgMetalLoss = (filteredData.reduce((sum, d) => sum + parseFloat(d.data_metal_loss), 0) / filteredData.length).toFixed(3);
-        const avgBattery = Math.round(filteredData.reduce((sum, d) => sum + d.data_battery_percentage, 0) / filteredData.length);
+        const corrosionVals = filteredData.map(d => parseNumberSafe(d.data_corrosion_rate));
+        const metalVals = filteredData.map(d => parseNumberSafe(d.data_metal_loss));
+        const batteryVals = filteredData.map(d => parseNumberSafe(d.data_battery_percentage));
+
+        const avgCorrosion = (corrosionVals.reduce((s, v) => s + v, 0) / corrosionVals.length);
+        const avgMetalLoss = (metalVals.reduce((s, v) => s + v, 0) / metalVals.length);
+        const avgBattery = filteredData[0].data_battery_percentage; // battery of latest device
         const activeProbes = filteredData.filter(d => d.data_probe_status === 1).length;
 
         return {
-            avgCorrosion,
-            avgMetalLoss,
+            avgCorrosion: avgCorrosion.toFixed(3),   // 3 decimals (mpy)
+            avgMetalLoss: avgMetalLoss.toFixed(6),   // 6 decimals (mils)
             avgBattery,
             activeProbes,
             totalReadings: filteredData.length
@@ -81,15 +95,12 @@ const Dashboard = ({ data: propData }) => {
 
     // Prepare chart data
     const chartData = useMemo(() => {
-        return filteredData.slice(0, 30).reverse().map(d => {
-            // Safely handle timestamp conversion
+        return (filteredData || []).slice(0, 30).reverse().map(d => {
             let dateStr = '—';
             if (d.data_timestamp) {
                 try {
-                    const date = d.data_timestamp instanceof Date
-                        ? d.data_timestamp
-                        : new Date(d.data_timestamp);
-                    dateStr = date.toLocaleDateString();
+                    const date = d.data_timestamp instanceof Date ? d.data_timestamp : new Date(d.data_timestamp);
+                    dateStr = date.toISOString().substring(0, 19).replace('T', '-'); // YYYY-MM-DD
                 } catch (e) {
                     console.warn('Invalid timestamp:', d.data_timestamp);
                 }
@@ -97,9 +108,9 @@ const Dashboard = ({ data: propData }) => {
 
             return {
                 date: dateStr,
-                corrosion: parseFloat(d.data_corrosion_rate) || 0,
-                metalLoss: (parseFloat(d.data_metal_loss) || 0) * 1000,
-                resistance: d.data_probe_resistance || 0
+                corrosion: parseNumberSafe(d.data_corrosion_rate), // keep original units (mpy)
+                metalLoss: parseNumberSafe(d.data_metal_loss),     // keep original units (mils) — **NO** *1000 conversion
+                resistance: parseNumberSafe(d.data_probe_resistance)
             };
         });
     }, [filteredData]);
@@ -140,6 +151,20 @@ const Dashboard = ({ data: propData }) => {
             </div>
         );
     }
+
+    // Tooltip formatter for units & fixed decimals
+    const tooltipFormatter = (value, name) => {
+        if (name === 'Corrosion Rate' || name === 'corrosion') {
+            return [`${parseNumberSafe(value).toFixed(3)} mpy`, name];
+        }
+        if (name === 'Metal Loss' || name === 'metalLoss') {
+            return [`${parseNumberSafe(value).toFixed(6)} mils`, name];
+        }
+        if (name === 'Resistance' || name === 'resistance') {
+            return [value, name];
+        }
+        return [value, name];
+    };
 
     return (
         <div className={`min-h-screen ${colors.bg}`}>
@@ -229,24 +254,24 @@ const Dashboard = ({ data: propData }) => {
                         </div>
 
                         {/* Card 4: Active Probes */}
-                        <div className={`${colors.cardBg} backdrop-blur-sm border ${colors.cardBorder} rounded-xl p-6`}>
+                        {/* <div className={`${colors.cardBg} backdrop-blur-sm border ${colors.cardBorder} rounded-xl p-6`}>
                             <div className="flex items-center justify-between mb-2">
                                 <Activity className="w-5 h-5 text-blue-400" />
                                 <span className="text-xs font-medium text-blue-400 bg-blue-500/20 px-2 py-1 rounded">ACTIVE</span>
                             </div>
                             <p className={`text-2xl font-bold ${colors.text}`}>{stats.activeProbes}</p>
                             <p className={`text-xs ${colors.textTertiary} mt-1`}>Active Probes (Status=1)</p>
-                        </div>
+                        </div> */}
 
                         {/* Card 5: Total Data Points */}
-                        <div className={`${colors.cardBg} backdrop-blur-sm border ${colors.cardBorder} rounded-xl p-6`}>
+                        {/* <div className={`${colors.cardBg} backdrop-blur-sm border ${colors.cardBorder} rounded-xl p-6`}>
                             <div className="flex items-center justify-between mb-2">
                                 <Calendar className="w-5 h-5 text-purple-400" />
                                 <span className="text-xs font-medium text-purple-400 bg-purple-500/20 px-2 py-1 rounded">TOTAL</span>
                             </div>
                             <p className={`text-2xl font-bold ${colors.text}`}>{stats.totalReadings}</p>
                             <p className={`text-xs ${colors.textTertiary} mt-1`}>Total Readings</p>
-                        </div>
+                        </div> */}
                     </div>
                 )}
 
@@ -260,6 +285,7 @@ const Dashboard = ({ data: propData }) => {
                                 <XAxis dataKey="date" stroke={colors.chartAxis} style={{ fontSize: '12px' }} />
                                 <YAxis stroke={colors.chartAxis} style={{ fontSize: '12px' }} />
                                 <Tooltip
+                                    formatter={tooltipFormatter}
                                     contentStyle={{
                                         backgroundColor: isDark ? '#1e293b' : '#ffffff',
                                         border: `1px solid ${isDark ? '#475569' : '#e5e7eb'}`,
@@ -281,6 +307,7 @@ const Dashboard = ({ data: propData }) => {
                                 <XAxis dataKey="date" stroke={colors.chartAxis} style={{ fontSize: '12px' }} />
                                 <YAxis stroke={colors.chartAxis} style={{ fontSize: '12px' }} />
                                 <Tooltip
+                                    formatter={tooltipFormatter}
                                     contentStyle={{
                                         backgroundColor: isDark ? '#1e293b' : '#ffffff',
                                         border: `1px solid ${isDark ? '#475569' : '#e5e7eb'}`,
@@ -317,6 +344,7 @@ const Dashboard = ({ data: propData }) => {
                             <tbody className={`divide-y ${colors.divide}`}>
                                 {filteredData.slice(0, 20).map((row) => (
                                     <tr key={row.id} className={`${colors.hoverBg} transition-colors`}>
+                                        {console.log(row)}
                                         <td className={`px-6 py-4 whitespace-nowrap text-sm ${colors.textTertiary}`}>
                                             {row.data_timestamp ? (
                                                 row.data_timestamp instanceof Date ?
@@ -330,11 +358,11 @@ const Dashboard = ({ data: propData }) => {
                                         </td>
 
                                         <td className={`px-6 py-4 whitespace-nowrap text-sm ${colors.text} font-semibold`}>
-                                            {row.data_corrosion_rate} mpy
+                                            {formatCorrosion(row.data_corrosion_rate)} mpy
                                         </td>
 
                                         <td className={`px-6 py-4 whitespace-nowrap text-sm ${colors.textTertiary}`}>
-                                            {row.data_metal_loss} mils
+                                            {formatMetalLoss(row.data_metal_loss)} mils
                                         </td>
 
                                         <td className="px-6 py-4 whitespace-nowrap">
@@ -342,12 +370,12 @@ const Dashboard = ({ data: propData }) => {
                                                 <div className={`w-16 ${colors.batteryTrack} rounded-full h-2 mr-2`}>
                                                     <div
                                                         className={`${colors.batteryFill} h-2 rounded-full`}
-                                                        style={{ width: `${row.data_battery_percentage}%` }}
+                                                        style={{ width: `${parseNumberSafe(row.data_battery_percentage)}%` }}
                                                     />
                                                 </div>
 
                                                 <span className={`text-sm ${colors.textTertiary}`}>
-                                                    {row.data_battery_percentage}%
+                                                    {parseNumberSafe(row.data_battery_percentage)}%
                                                 </span>
                                             </div>
                                         </td>

@@ -81,7 +81,7 @@ const DeviceConfigPage = () => {
                             </div>
                             <div>
                                 <p className={`text-xs ${colors.textSecondary} mb-1`}>Interval</p>
-                                <p className={`text-sm font-medium ${colors.text}`}>{config.interval}h</p>
+                                <p className={`text-sm font-medium ${colors.text}`}>{config.interval} min</p>
                             </div>
                             <div>
                                 <p className={`text-xs ${colors.textSecondary} mb-1`}>Cycle Time</p>

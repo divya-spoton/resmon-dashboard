@@ -4,6 +4,10 @@ import { useAuth } from '../contexts/AuthContext';
 import { useData } from '../contexts/DataContext';
 import { Download, FileText, Calendar, Filter } from 'lucide-react';
 
+const FIELD_LABELS = {
+    probeResistance: 'Expo Units'
+};
+
 const ExportPage = () => {
     const { colors } = useTheme();
     const { permissions } = useAuth();
@@ -73,7 +77,7 @@ const ExportPage = () => {
             fieldMap.push('data_metal_loss');
         }
         if (fields.probeResistance) {
-            headers.push('Probe Resistance');
+            headers.push('Expo Units');
             fieldMap.push('data_probe_resistance');
         }
         if (fields.battery) {
@@ -123,7 +127,7 @@ const ExportPage = () => {
             }
             if (fields.corrosionRate) obj.corrosion_rate = row.data_corrosion_rate;
             if (fields.metalLoss) obj.metal_loss = row.data_metal_loss;
-            if (fields.probeResistance) obj.probe_resistance = row.data_probe_resistance;
+            if (fields.probeResistance) obj.expo_units = row.data_probe_resistance;
             if (fields.battery) obj.battery_percentage = row.data_battery_percentage;
             if (fields.probeStatus) obj.probe_status = row.data_probe_status === 1 ? 'Active' : 'Inactive';
             if (fields.checkElementResistance) obj.check_element_resistance = row.data_check_element_resistance;
@@ -261,7 +265,7 @@ const ExportPage = () => {
                                                 })}
                                                 className="mr-2"
                                             />
-                                            {key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())}
+                                            {FIELD_LABELS[key] || key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())}
                                         </label>
                                     ))}
                                 </div>
