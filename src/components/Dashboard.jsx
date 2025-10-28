@@ -1,18 +1,19 @@
 import React, { useState, useMemo } from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
-import { Activity, Battery, AlertCircle, TrendingUp, Droplets, Calendar } from 'lucide-react';
+import { Activity, Battery, AlertCircle, TrendingUp, Droplets, Calendar, AlertTriangle } from 'lucide-react';
 import { useTheme } from '../contexts/ThemeContext';
-import { useBluetoothData } from '../hooks/useFirebaseData';
-import mockData from '../utils/mockData'
+import { useData } from '../contexts/DataContext';
 
 const Dashboard = ({ data: propData }) => {
-    const { data: fetchedData, loading, error } = useBluetoothData();
+    const { bluetoothData: fetchedData, loading, error } = useData();
     const data = propData || fetchedData;
     // const [data] = useState(mockData);
 
     const [selectedDevice, setSelectedDevice] = useState('all');
     const [timeRange, setTimeRange] = useState('7days');
     const { isDark, toggleTheme, colors } = useTheme();
+    const [dateFrom, setDateFrom] = useState('');
+    const [dateTo, setDateTo] = useState('');
 
     // Get unique devices
     const devices = useMemo(() => {
@@ -26,6 +27,18 @@ const Dashboard = ({ data: propData }) => {
 
         if (selectedDevice !== 'all') {
             filtered = filtered.filter(d => d.device_id === selectedDevice);
+        }
+
+        if (dateFrom) {
+            const fromDate = new Date(dateFrom);
+            fromDate.setHours(0, 0, 0, 0);
+            filtered = filtered.filter(d => d.data_timestamp >= fromDate);
+        }
+
+        if (dateTo) {
+            const toDate = new Date(dateTo);
+            toDate.setHours(23, 59, 59, 999);
+            filtered = filtered.filter(d => d.data_timestamp <= toDate);
         }
 
         const now = new Date();
@@ -46,14 +59,14 @@ const Dashboard = ({ data: propData }) => {
         }
 
         return filtered.filter(d => d.data_timestamp >= cutoffDate);
-    }, [data, selectedDevice, timeRange]);
+    }, [data, selectedDevice, timeRange, dateFrom, dateTo]);
 
     // Calculate statistics
     const stats = useMemo(() => {
         if (filteredData.length === 0) return null;
 
         const avgCorrosion = (filteredData.reduce((sum, d) => sum + parseFloat(d.data_corrosion_rate), 0) / filteredData.length).toFixed(3);
-        const avgMetalLoss = (filteredData.reduce((sum, d) => sum + parseFloat(d.data_metal_loss), 0) / filteredData.length).toFixed(6);
+        const avgMetalLoss = (filteredData.reduce((sum, d) => sum + parseFloat(d.data_metal_loss), 0) / filteredData.length).toFixed(3);
         const avgBattery = Math.round(filteredData.reduce((sum, d) => sum + d.data_battery_percentage, 0) / filteredData.length);
         const activeProbes = filteredData.filter(d => d.data_probe_status === 1).length;
 
@@ -68,18 +81,36 @@ const Dashboard = ({ data: propData }) => {
 
     // Prepare chart data
     const chartData = useMemo(() => {
-        return filteredData.slice(0, 30).reverse().map(d => ({
-            date: d.data_timestamp.toLocaleDateString(),
-            corrosion: parseFloat(d.data_corrosion_rate),
-            metalLoss: parseFloat(d.data_metal_loss) * 1000, // Convert to smaller unit for visibility
-            resistance: d.data_probe_resistance
-        }));
+        return filteredData.slice(0, 30).reverse().map(d => {
+            // Safely handle timestamp conversion
+            let dateStr = '—';
+            if (d.data_timestamp) {
+                try {
+                    const date = d.data_timestamp instanceof Date
+                        ? d.data_timestamp
+                        : new Date(d.data_timestamp);
+                    dateStr = date.toLocaleDateString();
+                } catch (e) {
+                    console.warn('Invalid timestamp:', d.data_timestamp);
+                }
+            }
+
+            return {
+                date: dateStr,
+                corrosion: parseFloat(d.data_corrosion_rate) || 0,
+                metalLoss: (parseFloat(d.data_metal_loss) || 0) * 1000,
+                resistance: d.data_probe_resistance || 0
+            };
+        });
     }, [filteredData]);
 
     if (loading) {
         return (
             <div className={`min-h-screen ${colors.bg} flex items-center justify-center`}>
-                <div className={`${colors.text}`}>Loading data...</div>
+                <div className="text-center">
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-cyan-500 mx-auto mb-4"></div>
+                    <div className={`${colors.text}`}>Loading dashboard data...</div>
+                </div>
             </div>
         );
     }
@@ -87,7 +118,11 @@ const Dashboard = ({ data: propData }) => {
     if (error) {
         return (
             <div className={`min-h-screen ${colors.bg} flex items-center justify-center`}>
-                <div className="text-red-400">Error loading data: {error}</div>
+                <div className="text-center">
+                    <AlertTriangle className="w-12 h-12 text-red-400 mx-auto mb-4" />
+                    <div className="text-red-400 mb-2">Error loading data</div>
+                    <div className="text-sm text-gray-500">{error}</div>
+                </div>
             </div>
         );
     }
@@ -138,6 +173,26 @@ const Dashboard = ({ data: propData }) => {
                             <option value="all">All Time</option>
                         </select>
                     </div>
+
+                    <div className="flex-1 min-w-[200px]">
+                        <label className={`block text-sm font-medium ${colors.textTertiary} mb-2`}>From Date</label>
+                        <input
+                            type="date"
+                            value={dateFrom}
+                            onChange={(e) => setDateFrom(e.target.value)}
+                            className={`w-full ${colors.inputBg} border ${colors.inputBorder} ${colors.text} rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-cyan-500`}
+                        />
+                    </div>
+
+                    <div className="flex-1 min-w-[200px]">
+                        <label className={`block text-sm font-medium ${colors.textTertiary} mb-2`}>To Date</label>
+                        <input
+                            type="date"
+                            value={dateTo}
+                            onChange={(e) => setDateTo(e.target.value)}
+                            className={`w-full ${colors.inputBg} border ${colors.inputBorder} ${colors.text} rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-cyan-500`}
+                        />
+                    </div>
                 </div>
 
                 {/* Stats Cards */}
@@ -149,8 +204,8 @@ const Dashboard = ({ data: propData }) => {
                                 <TrendingUp className="w-5 h-5 text-cyan-400" />
                                 <span className="text-xs font-medium text-cyan-400 bg-cyan-500/20 px-2 py-1 rounded">AVG</span>
                             </div>
-                            <p className={`text-2xl font-bold ${colors.text}`}>{stats.avgCorrosion}</p>
-                            <p className={`text-xs ${colors.textTertiary} mt-1`}>Corrosion Rate</p>
+                            <p className={`text-2xl font-bold ${colors.text}`}>{stats.avgCorrosion} mpy</p>
+                            <p className={`text-xs ${colors.textTertiary} mt-1`}>Corrosion Rate (mpy)</p>
                         </div>
 
                         {/* Card 2: AVG Metal Loss */}
@@ -159,7 +214,7 @@ const Dashboard = ({ data: propData }) => {
                                 <AlertCircle className="w-5 h-5 text-amber-400" />
                                 <span className="text-xs font-medium text-amber-400 bg-amber-500/20 px-2 py-1 rounded">AVG</span>
                             </div>
-                            <p className={`text-2xl font-bold ${colors.text}`}>{stats.avgMetalLoss}</p>
+                            <p className={`text-2xl font-bold ${colors.text}`}>{stats.avgMetalLoss} mils</p>
                             <p className={`text-xs ${colors.textTertiary} mt-1`}>Metal Loss (mils)</p>
                         </div>
 
@@ -180,7 +235,7 @@ const Dashboard = ({ data: propData }) => {
                                 <span className="text-xs font-medium text-blue-400 bg-blue-500/20 px-2 py-1 rounded">ACTIVE</span>
                             </div>
                             <p className={`text-2xl font-bold ${colors.text}`}>{stats.activeProbes}</p>
-                            <p className={`text-xs ${colors.textTertiary} mt-1`}>Active Probes</p>
+                            <p className={`text-xs ${colors.textTertiary} mt-1`}>Active Probes (Status=1)</p>
                         </div>
 
                         {/* Card 5: Total Data Points */}
@@ -190,7 +245,7 @@ const Dashboard = ({ data: propData }) => {
                                 <span className="text-xs font-medium text-purple-400 bg-purple-500/20 px-2 py-1 rounded">TOTAL</span>
                             </div>
                             <p className={`text-2xl font-bold ${colors.text}`}>{stats.totalReadings}</p>
-                            <p className={`text-xs ${colors.textTertiary} mt-1`}>Data Points</p>
+                            <p className={`text-xs ${colors.textTertiary} mt-1`}>Total Readings</p>
                         </div>
                     </div>
                 )}
@@ -252,8 +307,8 @@ const Dashboard = ({ data: propData }) => {
                                 <tr>
                                     <th className={`px-6 py-3 text-left text-xs font-medium ${colors.textTertiary} uppercase tracking-wider`}>Timestamp</th>
                                     <th className={`px-6 py-3 text-left text-xs font-medium ${colors.textTertiary} uppercase tracking-wider`}>Device</th>
-                                    <th className={`px-6 py-3 text-left text-xs font-medium ${colors.textTertiary} uppercase tracking-wider`}>Corrosion Rate</th>
-                                    <th className={`px-6 py-3 text-left text-xs font-medium ${colors.textTertiary} uppercase tracking-wider`}>Metal Loss</th>
+                                    <th className={`px-6 py-3 text-left text-xs font-medium ${colors.textTertiary} uppercase tracking-wider`}>Corrosion Rate (mpy)</th>
+                                    <th className={`px-6 py-3 text-left text-xs font-medium ${colors.textTertiary} uppercase tracking-wider`}>Metal Loss (mils)</th>
                                     <th className={`px-6 py-3 text-left text-xs font-medium ${colors.textTertiary} uppercase tracking-wider`}>Battery</th>
                                     <th className={`px-6 py-3 text-left text-xs font-medium ${colors.textTertiary} uppercase tracking-wider`}>Status</th>
                                 </tr>
@@ -263,7 +318,11 @@ const Dashboard = ({ data: propData }) => {
                                 {filteredData.slice(0, 20).map((row) => (
                                     <tr key={row.id} className={`${colors.hoverBg} transition-colors`}>
                                         <td className={`px-6 py-4 whitespace-nowrap text-sm ${colors.textTertiary}`}>
-                                            {row.data_timestamp.toLocaleString()}
+                                            {row.data_timestamp ? (
+                                                row.data_timestamp instanceof Date ?
+                                                    row.data_timestamp.toLocaleString() :
+                                                    new Date(row.data_timestamp).toLocaleString()
+                                            ) : '—'}
                                         </td>
 
                                         <td className={`px-6 py-4 whitespace-nowrap text-sm font-mono ${colors.textTertiary}`}>
@@ -271,11 +330,11 @@ const Dashboard = ({ data: propData }) => {
                                         </td>
 
                                         <td className={`px-6 py-4 whitespace-nowrap text-sm ${colors.text} font-semibold`}>
-                                            {row.data_corrosion_rate}
+                                            {row.data_corrosion_rate} mpy
                                         </td>
 
                                         <td className={`px-6 py-4 whitespace-nowrap text-sm ${colors.textTertiary}`}>
-                                            {row.data_metal_loss}
+                                            {row.data_metal_loss} mils
                                         </td>
 
                                         <td className="px-6 py-4 whitespace-nowrap">

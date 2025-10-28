@@ -1,3 +1,10 @@
+URGENT:
+1) that decimal value on dashboard
+2) that pdf changes
+3) instead of slicing can we add pagination of somekind so if they want they can load more data and we dont crop them of other data
+4) that devices bug still exists
+==================================================================================================================
+
 1. Admin user creation on client signs out admin — security/logic bug
 Files: src/contexts/AuthContext.jsx (registerUser function)
 
@@ -8,6 +15,8 @@ Fix: Use the Cloud Function / Admin SDK flows we discussed earlier:
 createUserAsAdmin callable function that calls admin.auth().createUser(...) and writes users/{uid}.
 
 deleteUserAsAdmin callable function that calls admin.auth().deleteUser(uid) and deletes the Firestore doc.
+
+For user registration/deletion, you need to create Firebase Cloud Functions. This is critical because client-side can't create multiple users.
 ==================================================================================================================
 2. 'in' operator size limit — Firestore where('field', 'in', array) supports max 10 elements. If permissions.assignedDevices.length > 10 your query will throw.
 Fix: If assignedDevices.length > 10 chunk the array into batches of up to 10 and run multiple queries, then merge results. (Or use a different data model / index.)
@@ -21,3 +30,6 @@ Server-side enforcement: Ensure Firestore security rules deny non-admins from wr
 Where to change: Update project Firestore rules (not in this repo) or add Cloud Function.
 ==================================================================================================================
 4. pagination : 99 acc chat : https://chatgpt.com/c/68e60bdb-629c-8320-bbfd-57116e8220a2
+
+==================================================================================================================
+

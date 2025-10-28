@@ -1,13 +1,13 @@
 import React, { useState, useMemo } from 'react';
 import { useTheme } from '../contexts/ThemeContext';
 import { useAuth } from '../contexts/AuthContext';
-import { useBluetoothData } from '../hooks/useFirebaseData';
+import { useData } from '../contexts/DataContext';
 import { Download, FileText, Calendar, Filter } from 'lucide-react';
 
 const ExportPage = () => {
     const { colors } = useTheme();
     const { permissions } = useAuth();
-    const { data } = useBluetoothData(null, 10000); // Fetch more data for export
+    const { bluetoothData: data } = useData();
     const [exportConfig, setExportConfig] = useState({
         format: 'csv',
         dateFrom: '',
@@ -65,11 +65,11 @@ const ExportPage = () => {
             fieldMap.push('device_id', 'device_name');
         }
         if (fields.corrosionRate) {
-            headers.push('Corrosion Rate');
+            headers.push('Corrosion Rate (mpy)');
             fieldMap.push('data_corrosion_rate');
         }
         if (fields.metalLoss) {
-            headers.push('Metal Loss');
+            headers.push('Metal Loss (mils)');
             fieldMap.push('data_metal_loss');
         }
         if (fields.probeResistance) {

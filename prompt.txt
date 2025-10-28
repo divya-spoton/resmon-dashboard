@@ -10,8 +10,168 @@ following features are required:
 some inconsistencies improvements from my side: currently loading and error states are not used consistently. some places we just directly start calculating and processing data without using loading state to user. and we are on different pages fetching same data again and again. this is leading to many reads which is increasing bills. 
 
 for now ignore the main company distributing to multiple company part. just want to make it work for one company for now.  
-i am sharing the current code i have (only important parts not the imports or other non-required code). i want you to analyze code and if any changes are required, bugs/inconsistencies are found then
-just give me the code snippets and changes to update, remove or add, dont rewrite any code if not required
+i am sharing the current code i have (only important parts of the files, not the imports or other non-required code). i want you to analyze code and if any changes are required, bugs/inconsistencies are found then 
+just give me the code snippets and changes to update, remove or add, dont rewrite any code if not required and in brief explain what is happening what component and data is controlling what.
+note: no need to make small changes that make no difference like random optimisation or somethings that arent needed.
+i will share few files at a time that are most connected. if no changes are needed that are important or critical tell me to move to next and i will share other files.
+my folder structure is
+src/components: login, dashboard, layout, usermanagement
+src/contexts: auth, theme
+src/hooks: useFirebaseData
+src/pageS: alters,deviceconfig,devicespage,exportpage
+src/routes:privateroute
+src/appjsx
+src/mainjsx
+
+collections in firebase:
+ble_config:
+document example:
+alloy
+"adm"
+(string)
+
+
+cycle_time
+"10"
+(string)
+
+
+device_id
+"2C:CF:67:B6:DA:16"
+(string)
+
+
+device_name
+"Pico 2C:CF:67:B6:DA:16"
+(string)
+
+
+
+element
+(map)
+
+
+element_1
+"mn"
+(string)
+
+
+element_2
+"al"
+(string)
+
+
+id
+"12"
+(string)
+
+
+ident
+"local"
+(string)
+
+
+interval
+30
+(number)
+
+
+span_mils
+15
+(number)
+
+
+tag
+"1019"
+(string)
+
+
+temperature
+true
+(Boolean)
+
+
+timestamp
+19 March 2025 at 17:30:08 UTC+5:30
+(timestamp)
+
+
+type
+"cylindrical"
+bluetooth_data collection:
+sometimes the doc might not have some fields like userUid and etc
+data_battery_percentage
+100
+(number)
+
+
+data_check_element_resistance
+0
+(number)
+
+
+data_corrosion_rate
+0
+(number)
+
+
+data_metal_loss
+1.7255849838256836
+(number)
+
+
+data_probe_resistance
+862.79248046875
+(number)
+
+
+data_probe_status
+1
+(number)
+
+
+data_reference_resistance
+0
+(number)
+
+
+data_timestamp
+28 October 2025 at 04:07:00 UTC+5:30
+(timestamp)
+
+
+device_id
+"2C:CF:67:D1:B9:FE"
+(string)
+
+
+device_name
+"Pico 2C:CF:67:D1:B9:FE"
+(string)
+
+
+timestamp
+28 October 2025 at 09:46:42 UTC+5:30
+(timestamp)
+
+
+timestamp_upload
+28 October 2025 at 10:52:30 UTC+5:30
+(timestamp)
+
+
+user_displayName
+"polsoft polsoft"
+(string)
+
+
+user_email
+"polsoft@polmon.com"
+(string)
+
+
+user_uid
+"i7qswdPEhQQUzV84xyEMWlygBqE3"
 
 ====================================
 99:

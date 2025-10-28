@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { useTheme } from '../contexts/ThemeContext';
-import { useBluetoothData, useDeviceConfig } from '../hooks/useFirebaseData';
 import { Droplets, Battery, Clock } from 'lucide-react';
+import { useData } from '../contexts/DataContext';
 
 const Loader = () => (
     <div className="w-full py-12 flex justify-center items-center">
@@ -17,16 +17,17 @@ const SafeDate = ({ date }) => (
     <>{date ? date.toLocaleString() : '—'}</>
 );
 
+
 const SafeNumber = ({ value, fixed = null, suffix = '' }) => {
-    if (value === null || value === undefined || Number.isNaN(value)) return <>—</>;
-    if (fixed !== null) return <>{Number(value).toFixed(fixed)}{suffix}</>;
-    return <>{value}{suffix}</>;
+    if (value === null || value === undefined || Number.isNaN(Number(value))) return <>—</>;
+    const num = Number(value);
+    if (fixed !== null) return <>{num.toFixed(fixed)}{suffix}</>;
+    return <>{num}{suffix}</>;
 };
 
 const DevicesPage = () => {
     const { colors } = useTheme();
-    const { data, loading, error } = useBluetoothData();
-    const { configs, loading: configsLoading } = useDeviceConfig();
+    const { bluetoothData: data, bleConfig: configs, loading, error } = useData();
     const [selectedDevice, setSelectedDevice] = useState(null);
 
     const devices = useMemo(() => {
@@ -84,7 +85,7 @@ const DevicesPage = () => {
                                             <Droplets className="w-6 h-6 text-cyan-400" />
                                         </div>
                                         <div>
-                                            <h3 className={`font-semibold ${colors.text}`}>{device.name}</h3>
+                                            <h3 className={`font-semibold ${colors.text}`}>{device.config?.tag || device.name}</h3>
                                             <p className={`text-xs ${colors.textSecondary} font-mono mt-1`}>{device.id}</p>
                                         </div>
                                     </div>
@@ -95,6 +96,20 @@ const DevicesPage = () => {
 
                                 <div className="space-y-3">
                                     <div className="flex items-center justify-between">
+                                        <span className={`text-sm ${colors.textSecondary}`}>Corrosion Rate</span>
+                                        <span className={`text-sm font-medium ${colors.text}`}>
+                                            <SafeNumber value={device.latestData?.data_corrosion_rate} fixed={3} suffix=" mpy" />
+                                        </span>
+                                    </div>
+
+                                    <div className="flex items-center justify-between">
+                                        <span className={`text-sm ${colors.textSecondary}`}>Metal Loss</span>
+                                        <span className={`text-sm font-medium ${colors.text}`}>
+                                            <SafeNumber value={device.latestData?.data_metal_loss} fixed={3} suffix=" mils" />
+                                        </span>
+                                    </div>
+
+                                    <div className="flex items-center justify-between">
                                         <span className={`text-sm ${colors.textSecondary}`}>Battery</span>
                                         <div className="flex items-center gap-2">
                                             <Battery className="w-4 h-4 text-green-400" />
@@ -102,20 +117,6 @@ const DevicesPage = () => {
                                                 <SafeNumber value={device.latestData?.data_battery_percentage} suffix="%" />
                                             </span>
                                         </div>
-                                    </div>
-
-                                    <div className="flex items-center justify-between">
-                                        <span className={`text-sm ${colors.textSecondary}`}>Corrosion Rate</span>
-                                        <span className={`text-sm font-medium ${colors.text}`}>
-                                            <SafeNumber value={device.latestData?.data_corrosion_rate} />
-                                        </span>
-                                    </div>
-
-                                    <div className="flex items-center justify-between">
-                                        <span className={`text-sm ${colors.textSecondary}`}>Metal Loss</span>
-                                        <span className={`text-sm font-medium ${colors.text}`}>
-                                            <SafeNumber value={device.latestData?.data_metal_loss} />
-                                        </span>
                                     </div>
 
                                     <div className={`flex items-center gap-2 pt-2 border-t ${colors.cardBorder}`}>
@@ -176,8 +177,12 @@ const DevicesPage = () => {
                                         {selectedDeviceData.map((record) => (
                                             <tr key={record.id} className={`${colors.hoverBg} ${colors.cardBorder}`}>
                                                 <td className={`px-6 py-4 whitespace-nowrap text-sm ${colors.textTertiary}`}><SafeDate date={record.data_timestamp} /></td>
-                                                <td className={`px-6 py-4 whitespace-nowrap text-sm ${colors.text} font-semibold`}><SafeNumber value={record.data_corrosion_rate} /></td>
-                                                <td className={`px-6 py-4 whitespace-nowrap text-sm ${colors.textTertiary}`}><SafeNumber value={record.data_metal_loss} /></td>
+                                                <td className={`px-6 py-4 whitespace-nowrap text-sm ${colors.text} font-semibold`}>
+                                                    <SafeNumber value={record.data_corrosion_rate} fixed={3} suffix=" mpy" />
+                                                </td>
+                                                <td className={`px-6 py-4 whitespace-nowrap text-sm ${colors.textTertiary}`}>
+                                                    <SafeNumber value={record.data_metal_loss} fixed={3} suffix=" mils" />
+                                                </td>
                                                 <td className={`px-6 py-4 whitespace-nowrap text-sm ${colors.textTertiary}`}>
                                                     {record.data_probe_resistance !== undefined && record.data_probe_resistance !== null ? Number(record.data_probe_resistance).toFixed(2) + ' Ω' : '—'}
                                                 </td>

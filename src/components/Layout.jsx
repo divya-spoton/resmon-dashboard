@@ -30,9 +30,9 @@ const Layout = () => {
     const navItems = [
         { path: '/dashboard', icon: LayoutDashboard, label: 'Dashboard', roles: ['admin', 'manager', 'worker'] },
         { path: '/devices', icon: Droplets, label: 'Devices', roles: ['admin', 'manager', 'worker'] },
-        { path: '/alerts', icon: AlertTriangle, label: 'Alerts', roles: ['admin', 'manager', 'worker'] },
+        // { path: '/alerts', icon: AlertTriangle, label: 'Alerts', roles: ['admin', 'manager', 'worker'] },
+        { path: '/device-config', icon: Settings, label: 'Configuration', roles: ['admin', 'manager'] },
         { path: '/export', icon: Download, label: 'Export Data', roles: ['admin', 'manager'], permission: 'canExportData' },
-        // { path: '/device-config', icon: Settings, label: 'Configuration', roles: ['admin', 'manager'] },
         // { path: '/users', icon: Users, label: 'User Management', roles: ['admin'] }
     ];
 

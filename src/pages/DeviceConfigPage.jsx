@@ -1,11 +1,11 @@
 import React, { useState, useMemo } from 'react';
 import { useTheme } from '../contexts/ThemeContext';
-import { useDeviceConfig } from '../hooks/useFirebaseData';
-import { Settings, Edit, Search } from 'lucide-react';
+import { useData } from '../contexts/DataContext';
+import { Settings, Search } from 'lucide-react';
 
 const DeviceConfigPage = () => {
     const { colors } = useTheme();
-    const { configs, loading } = useDeviceConfig();
+    const { bleConfig: configs, loading } = useData();
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedConfig, setSelectedConfig] = useState(null);
 
@@ -64,12 +64,6 @@ const DeviceConfigPage = () => {
                                     <p className={`text-xs ${colors.textSecondary} font-mono mt-1`}>{config.device_id}</p>
                                 </div>
                             </div>
-                            <button
-                                onClick={() => setSelectedConfig(config)}
-                                className="text-cyan-400 hover:text-cyan-300"
-                            >
-                                <Edit className="w-4 h-4" />
-                            </button>
                         </div>
 
                         <div className="grid grid-cols-2 gap-4">

@@ -54,38 +54,43 @@ export const AuthProvider = ({ children }) => {
         return signOut(auth);
     };
 
-    const registerUser = async (email, password, displayName, role, permissions) => {
-        // Only admin can register users
-        if (userRole !== 'admin') {
-            throw new Error('Only admins can register users');
-        }
+    // const registerUser = async (email, password, displayName, role, permissions) => {
+    //     // Only admin can register users
+    //     if (userRole !== 'admin') {
+    //         throw new Error('Only admins can register users');
+    //     }
 
-        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-        const newUser = userCredential.user;
+    //     const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+    //     const newUser = userCredential.user;
 
-        // Create user document in Firestore
-        await setDoc(doc(db, 'users', newUser.uid), {
-            email,
-            displayName,
-            role,
-            permissions,
-            createdAt: new Date(),
-            createdBy: currentUser.uid
-        });
+    //     // Create user document in Firestore
+    //     await setDoc(doc(db, 'users', newUser.uid), {
+    //         email,
+    //         displayName,
+    //         role,
+    //         permissions,
+    //         createdAt: new Date(),
+    //         createdBy: currentUser.uid
+    //     });
 
-        return newUser;
-    };
+    //     return newUser;
+    // };
 
     const getAllUsers = async () => {
         if (userRole !== 'admin') {
             throw new Error('Only admins can view all users');
         }
 
-        const usersSnapshot = await getDocs(collection(db, 'users'));
-        return usersSnapshot.docs.map(doc => ({
-            id: doc.id,
-            ...doc.data()
-        }));
+        try {
+            const usersSnapshot = await getDocs(collection(db, 'users'));
+            return usersSnapshot.docs.map(doc => ({
+                id: doc.id,
+                ...doc.data()
+            }));
+        } catch (error) {
+            console.error('Error fetching users:', error);
+            throw error;
+        }
     };
 
     const updateUserRole = async (userId, newRole, newPermissions) => {
@@ -93,19 +98,26 @@ export const AuthProvider = ({ children }) => {
             throw new Error('Only admins can update user roles');
         }
 
-        await updateDoc(doc(db, 'users', userId), {
-            role: newRole,
-            permissions: newPermissions
-        });
-    };
-
-    const deleteUser = async (userId) => {
-        if (userRole !== 'admin') {
-            throw new Error('Only admins can delete users');
+        try {
+            await updateDoc(doc(db, 'users', userId), {
+                role: newRole,
+                permissions: newPermissions,
+                updatedAt: new Date(),
+                updatedBy: currentUser.uid
+            });
+        } catch (error) {
+            console.error('Error updating user role:', error);
+            throw error;
         }
-
-        await deleteDoc(doc(db, 'users', userId));
     };
+
+    // const deleteUser = async (userId) => {
+    //     if (userRole !== 'admin') {
+    //         throw new Error('Only admins can delete users');
+    //     }
+
+    //     await deleteDoc(doc(db, 'users', userId));
+    // };
 
     const value = useMemo(() => ({
         currentUser,
@@ -113,10 +125,9 @@ export const AuthProvider = ({ children }) => {
         permissions,
         login,
         logout,
-        registerUser,
         getAllUsers,
-        updateUserRole,
-        deleteUser
+        updateUserRole
+        // registerUser and deleteUser removed
     }), [currentUser, userRole, permissions]);
 
     return (

@@ -7,10 +7,12 @@ import Layout from './components/Layout';
 import Login from './components/Login';
 import Dashboard from './components/Dashboard';
 import DevicesPage from './pages/DevicesPage';
-import AlertsPage from './pages/AlertsPage';
+// import AlertsPage from './pages/AlertsPage';
 import ExportPage from './pages/ExportPage';
 import DeviceConfigPage from './pages/DeviceConfigPage';
-import UserManagement from './components/UserManagement';
+// import UserManagement from './components/UserManagement';
+import { DataProvider } from './contexts/DataContext';
+import ErrorBoundary from './components/ErrorBoundary';
 
 function AppRoutes() {
   const { currentUser } = useAuth();
@@ -29,20 +31,19 @@ function AppRoutes() {
         <Route index element={<Navigate to="/dashboard" replace />} />
         <Route path="dashboard" element={<Dashboard />} />
         <Route path="devices" element={<DevicesPage />} />
-        <Route path="alerts" element={<AlertsPage />} />
+        {/* <Route path="alerts" element={<AlertsPage />} /> */}
+        <Route path="device-config" element={<DeviceConfigPage />} />
         <Route path="export" element={
           <PrivateRoute requiredPermission="canExportData">
             <ExportPage />
           </PrivateRoute>
         } />
-        <Route path="device-config" element={<DeviceConfigPage />} />
-        <Route path="users" element={
+        {/* <Route path="users" element={
           <PrivateRoute requiredRole="admin">
             <UserManagement />
           </PrivateRoute>
-        } />
+        } /> */}
       </Route>
-
       <Route path="*" element={<Navigate to="/dashboard" replace />} />
     </Routes>
   );
@@ -50,13 +51,17 @@ function AppRoutes() {
 
 function App() {
   return (
-    <BrowserRouter>
-      <ThemeProvider>
-        <AuthProvider>
-          <AppRoutes />
-        </AuthProvider>
-      </ThemeProvider>
-    </BrowserRouter>
+    <ErrorBoundary>
+      <BrowserRouter>
+        <ThemeProvider>
+          <AuthProvider>
+            <DataProvider>
+              <AppRoutes />
+            </DataProvider>
+          </AuthProvider>
+        </ThemeProvider>
+      </BrowserRouter>
+    </ErrorBoundary>
   );
 }
 
