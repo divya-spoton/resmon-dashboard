@@ -1,19 +1,25 @@
-import React, { useState, useMemo, useEffect } from 'react';
+changes i need (you dont need to rewrite entire file again with these changes, just tell me where to add/update/remove what code, for eg: add this function after this block of code): 1) In the Pipeline dashboard, the data is currently displayed by averaging the logged data for each day. However, we require the exact (raw) values instead of the averaged ones, and the graph should also display these exact values without any averaging.
+
+i will share you dashboard and how i am querying the data
+give me exact snippets for code changes to make for the client requirement "In the Pipeline dashboard, the data is currently displayed by averaging the logged data for each day. However, we require the exact (raw) values instead of the averaged ones, and the graph should also display these exact values without any averaging." (also, remove the all option from the options of devices and show latest readings of selected device) along with changes like removing slicing
+major changes in graph: i want to show proper graph with timestamp and good readable axes. but problem is there are too many datapoints, so showing that on graph would make it cluttered. if you have some idea write code for it too. also some input where they can input some threshold value and graph can show outlier if there is any. if its possible do it else leave it be.
+
+
+import React, { useState, useMemo } from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { Activity, Battery, AlertCircle, TrendingUp, Droplets, Calendar, AlertTriangle } from 'lucide-react';
 import { useTheme } from '../contexts/ThemeContext';
 import { useData } from '../contexts/DataContext';
-import StatsCards from './StatsCards';
 
 const Dashboard = ({ data: propData }) => {
     const { bluetoothData: fetchedData, loading, error } = useData();
     const data = propData || fetchedData;
 
     const [selectedDevice, setSelectedDevice] = useState('');
-    const { isDark, colors } = useTheme();
+    const [timeRange, setTimeRange] = useState('7days');
+    const { isDark, toggleTheme, colors } = useTheme();
     const [dateFrom, setDateFrom] = useState('');
     const [dateTo, setDateTo] = useState('');
-    const [maxPoints, setMaxPoints] = useState(100);
 
     // Helpers: safe parse + formatting
     const parseNumberSafe = (v) => {
@@ -29,20 +35,12 @@ const Dashboard = ({ data: propData }) => {
         return uniqueDevices;
     }, [data]);
 
-    useEffect(() => {
-        if (devices && devices.length > 0 && !selectedDevice) {
-            setSelectedDevice(devices[0]);
-        }
-    }, [devices, selectedDevice]);
-
     // Filter data based on selections
     const filteredData = useMemo(() => {
         let filtered = data || [];
 
-        if (selectedDevice) {
+        if (selectedDevice !== 'all') {
             filtered = filtered.filter(d => d.device_id === selectedDevice);
-        } else {
-            return [];
         }
 
         if (dateFrom) {
@@ -55,70 +53,74 @@ const Dashboard = ({ data: propData }) => {
             const toDate = new Date(dateTo);
             toDate.setHours(23, 59, 59, 999);
             filtered = filtered.filter(d => new Date(d.data_timestamp) <= toDate);
+            console.log('Filtering to date:', toDate);
         }
 
-        return filtered;
-    }, [data, selectedDevice, dateFrom, dateTo]);
+        const now = new Date();
+        const cutoffDate = new Date();
 
-    // Table data: newest first, show up to 20 latest readings
-    const tableData = useMemo(() => {
-        if (!filteredData || filteredData.length === 0) return [];
-        const sortedDesc = [...filteredData].sort((a, b) => new Date(b.data_timestamp) - new Date(a.data_timestamp));
-        return sortedDesc.slice(0, 20);
-    }, [filteredData]);
+
+        switch (timeRange) {
+            case '24hours':
+                cutoffDate.setTime(now.getTime() - 24 * 60 * 60 * 1000);
+                break;
+            case '7days':
+                cutoffDate.setDate(now.getDate() - 7);
+                break;
+            case '30days':
+                cutoffDate.setDate(now.getDate() - 30);
+                break;
+            default:
+                return filtered;
+        }
+
+
+        return filtered.filter(d => new Date(d.data_timestamp) >= cutoffDate);
+    }, [data, selectedDevice, timeRange, dateFrom, dateTo]);
 
     // Calculate statistics
     const stats = useMemo(() => {
         if (!filteredData || filteredData.length === 0) return null;
 
-        // Get the latest reading (first item since data is ordered by desc)
-        const latestReading = filteredData[0];
+        const corrosionVals = filteredData.map(d => parseNumberSafe(d.data_corrosion_rate));
+        const metalVals = filteredData.map(d => parseNumberSafe(d.data_metal_loss));
+        const batteryVals = filteredData.map(d => parseNumberSafe(d.data_battery_percentage));
+
+        const avgCorrosion = (corrosionVals.reduce((s, v) => s + v, 0) / corrosionVals.length);
+        const avgMetalLoss = (metalVals.reduce((s, v) => s + v, 0) / metalVals.length);
+        const avgBattery = filteredData[0].data_battery_percentage; // battery of latest device
+        const activeProbes = filteredData.filter(d => d.data_probe_status === 1).length;
 
         return {
-            latestCorrosion: parseNumberSafe(latestReading.data_corrosion_rate).toFixed(3),
-            latestMetalLoss: parseNumberSafe(latestReading.data_metal_loss).toFixed(6),
-            latestBattery: parseNumberSafe(latestReading.data_battery_percentage),
-            latestTimestamp: latestReading.data_timestamp,
-            activeProbes: filteredData.filter(d => d.data_probe_status === 1).length,
+            avgCorrosion: avgCorrosion.toFixed(3),   // 3 decimals (mpy)
+            avgMetalLoss: avgMetalLoss.toFixed(6),   // 6 decimals (mils)
+            avgBattery,
+            activeProbes,
             totalReadings: filteredData.length
         };
     }, [filteredData]);
-
+ 
+    // Prepare chart data
     const chartData = useMemo(() => {
-        if (!filteredData || filteredData.length === 0) return [];
-
-        // Chronological order (oldest -> newest) for plotting
-        const sortedAsc = [...filteredData].sort((a, b) => new Date(a.data_timestamp) - new Date(b.data_timestamp));
-
-        // Clamp the maxPoints between 10 and 1000
-        const maxPts = Math.max(10, Math.min(1000, Number(maxPoints) || 500));
-
-        let sampled = sortedAsc;
-        if (sortedAsc.length > maxPts) {
-            const step = Math.ceil(sortedAsc.length / maxPts);
-            sampled = sortedAsc.filter((_, idx) => idx % step === 0);
-            // Ensure last point (the newest) is always included
-            const last = sortedAsc[sortedAsc.length - 1];
-            if (sampled.length === 0 || sampled[sampled.length - 1] !== last) {
-                sampled.push(last);
+        return (filteredData || []).slice(0, 30).reverse().map(d => {
+            let dateStr = '—';
+            if (d.data_timestamp) {
+                try {
+                    const date = d.data_timestamp instanceof Date ? d.data_timestamp : new Date(d.data_timestamp);
+                    dateStr = date.toISOString().substring(0, 19).replace('T', '-'); // YYYY-MM-DD
+                } catch (e) {
+                    console.warn('Invalid timestamp:', d.data_timestamp);
+                }
             }
-        }
 
-        return sampled.map((d, idx) => {
-            const ts = d.data_timestamp ? (d.data_timestamp instanceof Date ? d.data_timestamp : new Date(d.data_timestamp)) : null;
             return {
-                id: d.id ?? idx,
-                timestamp: ts ? ts.toISOString() : null,                       // canonical ISO (use for X axis)
-                dateLabel: ts ? ts.toLocaleString() : '—',                     // human label (tooltip / fallback)
-                fullTimestamp: ts ? ts.toLocaleString() : '—',
-                corrosion: parseNumberSafe(d.data_corrosion_rate),
-                metalLoss: parseNumberSafe(d.data_metal_loss),
-                resistance: parseNumberSafe(d.data_probe_resistance),
-                device_id: d.device_id
+                date: dateStr,
+                corrosion: parseNumberSafe(d.data_corrosion_rate), // keep original units (mpy)
+                metalLoss: parseNumberSafe(d.data_metal_loss),     // keep original units (mils) — **NO** *1000 conversion
+                resistance: parseNumberSafe(d.data_probe_resistance)
             };
         });
-    }, [filteredData, maxPoints]);
-
+    }, [filteredData]);
 
 
     if (loading) {
@@ -184,14 +186,14 @@ const Dashboard = ({ data: propData }) => {
                             onChange={(e) => setSelectedDevice(e.target.value)}
                             className={`w-full ${colors.inputBg} border ${colors.inputBorder} ${colors.text} rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-cyan-500`}
                         >
-                            {devices.length === 0 && <option value="">No devices available</option>}
+                            <option value="all">All Devices</option>
                             {devices.map(device => (
                                 <option key={device} value={device}>{device}</option>
                             ))}
                         </select>
                     </div>
 
-                    {/* <div className="flex-1 min-w-[200px]">
+                    <div className="flex-1 min-w-[200px]">
                         <label className={`block text-sm font-medium ${colors.textTertiary} mb-2`}>Time Range</label>
                         <select
                             value={timeRange}
@@ -203,7 +205,7 @@ const Dashboard = ({ data: propData }) => {
                             <option value="30days">Last 30 Days</option>
                             <option value="all">All Time</option>
                         </select>
-                    </div> */}
+                    </div>
 
                     <div className="flex-1 min-w-[200px]">
                         <label className={`block text-sm font-medium ${colors.textTertiary} mb-2`}>From Date</label>
@@ -226,49 +228,54 @@ const Dashboard = ({ data: propData }) => {
                     </div>
                 </div>
 
-                <div className="mb-6 flex flex-wrap gap-4">
-                    <div className="flex-1 min-w-[200px]">
-                        <label className={`block text-sm font-medium ${colors.textTertiary} mb-2`}>
-                            Max Data Points on Graph
-                        </label>
-                        <input
-                            type="number"
-                            value={maxPoints}
-                            onChange={(e) => setMaxPoints(parseInt(e.target.value) || 100)}
-                            min="10"
-                            max="1000"
-                            className={`w-full ${colors.inputBg} border ${colors.inputBorder} ${colors.text} rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-cyan-500`}
-                        />
-                    </div>
-
-                </div>
-
                 {/* Stats Cards */}
                 {stats && (
-                    <StatsCards stats={stats} />
+                    <div className={`mb-6`}>
+                        <h3 className={`text-lg font-semibold ${colors.text} mb-4`}>Latest Readings</h3>
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-8">
+                            {/* Card 1: AVG Corrosion */}
+                            <div className={`${colors.cardBg} backdrop-blur-sm border ${colors.cardBorder} rounded-xl p-6`}>
+                                <div className="flex items-center justify-between mb-2">
+                                    <TrendingUp className="w-5 h-5 text-cyan-400" />
+                                </div>
+                                <p className={`text-2xl font-bold ${colors.text}`}>{stats.avgCorrosion} mpy</p>
+                                <p className={`text-xs ${colors.textTertiary} mt-1`}>Corrosion Rate</p>
+                            </div>
+
+                            {/* Card 2: AVG Metal Loss */}
+                            <div className={`${colors.cardBg} backdrop-blur-sm border ${colors.cardBorder} rounded-xl p-6`}>
+                                <div className="flex items-center justify-between mb-2">
+                                    <AlertCircle className="w-5 h-5 text-amber-400" />
+                                </div>
+                                <p className={`text-2xl font-bold ${colors.text}`}>{stats.avgMetalLoss} mils</p>
+                                <p className={`text-xs ${colors.textTertiary} mt-1`}>Metal Loss</p>
+                            </div>
+
+                            {/* Card 3: Battery Level */}
+                            <div className={`${colors.cardBg} backdrop-blur-sm border ${colors.cardBorder} rounded-xl p-6`}>
+                                <div className="flex items-center justify-between mb-2">
+                                    <Battery className="w-5 h-5 text-green-400" />
+                                </div>
+                                <p className={`text-2xl font-bold ${colors.text}`}>{stats.avgBattery}%</p>
+                                <p className={`text-xs ${colors.textTertiary} mt-1`}>Battery Level</p>
+                            </div>
+
+                            {/* Card 4: Timestamp*/}
+                        </div>
+                    </div>
                 )}
 
                 {/* Charts */}
-                <div className="grid grid-cols-1 lg:grid-cols-1 gap-6 mb-8">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
                     <div className={`${colors.cardBg} backdrop-blur-sm border ${colors.cardBorder} rounded-xl p-6`}>
                         <h3 className={`text-lg font-semibold ${colors.text} mb-4`}>Corrosion Rate Trend</h3>
                         <ResponsiveContainer width="100%" height={300}>
                             <LineChart data={chartData}>
                                 <CartesianGrid strokeDasharray="3 3" stroke={colors.chartGrid} />
-                                <XAxis
-                                    dataKey="timestamp"
-                                    stroke={colors.chartAxis}
-                                    style={{ fontSize: '10px' }}
-                                    tickFormatter={(val) => (val ? new Date(val).toLocaleString() : '—')}
-                                    angle={-45}
-                                    textAnchor="end"
-                                    height={70}
-                                    interval="preserveStartEnd"
-                                />
+                                <XAxis dataKey="date" stroke={colors.chartAxis} style={{ fontSize: '12px' }} />
                                 <YAxis stroke={colors.chartAxis} style={{ fontSize: '12px' }} />
                                 <Tooltip
                                     formatter={tooltipFormatter}
-                                    labelFormatter={(label) => (label ? new Date(label).toLocaleString() : '—')}
                                     contentStyle={{
                                         backgroundColor: isDark ? '#1e293b' : '#ffffff',
                                         border: `1px solid ${isDark ? '#475569' : '#e5e7eb'}`,
@@ -287,20 +294,10 @@ const Dashboard = ({ data: propData }) => {
                         <ResponsiveContainer width="100%" height={300}>
                             <LineChart data={chartData}>
                                 <CartesianGrid strokeDasharray="3 3" stroke={colors.chartGrid} />
-                                <XAxis
-                                    dataKey="timestamp"
-                                    stroke={colors.chartAxis}
-                                    style={{ fontSize: '10px' }}
-                                    tickFormatter={(val) => (val ? new Date(val).toLocaleString() : '—')}
-                                    angle={-45}
-                                    textAnchor="end"
-                                    height={70}
-                                    interval="preserveStartEnd"
-                                />
+                                <XAxis dataKey="date" stroke={colors.chartAxis} style={{ fontSize: '12px' }} />
                                 <YAxis stroke={colors.chartAxis} style={{ fontSize: '12px' }} />
                                 <Tooltip
                                     formatter={tooltipFormatter}
-                                    labelFormatter={(label) => (label ? new Date(label).toLocaleString() : '—')}
                                     contentStyle={{
                                         backgroundColor: isDark ? '#1e293b' : '#ffffff',
                                         border: `1px solid ${isDark ? '#475569' : '#e5e7eb'}`,
@@ -335,7 +332,7 @@ const Dashboard = ({ data: propData }) => {
                             </thead>
 
                             <tbody className={`divide-y ${colors.divide}`}>
-                                {tableData.map((row) => (
+                                {filteredData.slice(0, 20).map((row) => (
                                     <tr key={row.id} className={`${colors.hoverBg} transition-colors`}>
                                         {console.log(row)}
                                         <td className={`px-6 py-4 whitespace-nowrap text-sm ${colors.textTertiary}`}>
@@ -394,3 +391,133 @@ const Dashboard = ({ data: propData }) => {
 };
 
 export default Dashboard;
+
+import React, { createContext, useState, useEffect, useContext, useMemo } from 'react';
+import { collection, query, where, onSnapshot, orderBy } from 'firebase/firestore';
+import { db } from '../firebase/config';
+import { useAuth } from './AuthContext';
+
+const DataContext = createContext();
+
+export const useData = () => {
+    const context = useContext(DataContext);
+    if (!context) {
+        throw new Error('useData must be used within DataProvider');
+    }
+    return context;
+};
+
+export const DataProvider = ({ children }) => {
+    const { currentUser } = useAuth();
+    const [bluetoothData, setBluetoothData] = useState([]);
+    const [bleConfig, setBleConfig] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
+
+    useEffect(() => {
+        if (!currentUser) {
+            setBluetoothData([]);
+            setBleConfig([]);
+            setLoading(false);
+            return;
+        }
+
+        setLoading(true);
+        setError(null);
+
+        // Subscribe to bluetooth_data collection
+        const bluetoothQuery = query(
+            collection(db, 'bluetooth_data'),
+            orderBy('data_timestamp', 'desc')
+        );
+
+        // Subscribe to ble_config collection
+        const configQuery = query(collection(db, 'ble_config'));
+
+        const unsubscribeBluetoothData = onSnapshot(
+            bluetoothQuery,
+            (snapshot) => {
+                const data = snapshot.docs.map(doc => {
+                    const docData = doc.data();
+                    return {
+                        id: doc.id,
+                        ...docData,
+                        // Safely convert Firestore timestamps to Date objects
+                        data_timestamp: docData.data_timestamp?.toDate ? docData.data_timestamp.toDate() :
+                            docData.data_timestamp ? new Date(docData.data_timestamp) : null,
+                        timestamp: docData.timestamp?.toDate ? docData.timestamp.toDate() :
+                            docData.timestamp ? new Date(docData.timestamp) : null,
+                        timestamp_upload: docData.timestamp_upload?.toDate ? docData.timestamp_upload.toDate() :
+                            docData.timestamp_upload ? new Date(docData.timestamp_upload) : null,
+                    };
+                });
+                setBluetoothData(data);
+                setLoading(false);
+            },
+            (err) => {
+                console.error('Error fetching bluetooth data:', err);
+                setError(err.message);
+                setLoading(false);
+            }
+        );
+
+        const unsubscribeConfig = onSnapshot(
+            configQuery,
+            (snapshot) => {
+                const data = snapshot.docs.map(doc => {
+                    const docData = doc.data();
+                    return {
+                        id: doc.id,
+                        ...docData,
+                        // Safely convert timestamp
+                        timestamp: docData.timestamp?.toDate ? docData.timestamp.toDate() :
+                            docData.timestamp ? new Date(docData.timestamp) : null,
+                    };
+                });
+                setBleConfig(data);
+            },
+            (err) => {
+                console.error('Error fetching BLE config:', err);
+                setError(err.message);
+            }
+        );
+
+        return () => {
+            unsubscribeBluetoothData();
+            unsubscribeConfig();
+        };
+    }, [currentUser]);
+
+    // Memoized computed values
+    const deviceList = useMemo(() => {
+        const devices = new Map();
+        bluetoothData.forEach(entry => {
+            if (entry.device_id) {
+                devices.set(entry.device_id, {
+                    id: entry.device_id,
+                    name: entry.device_name || entry.device_id,
+                    lastReading: entry.data_timestamp,
+                    batteryPercentage: entry.data_battery_percentage
+                });
+            }
+        });
+        return Array.from(devices.values());
+    }, [bluetoothData]);
+
+    const value = useMemo(() => ({
+        bluetoothData,
+        bleConfig,
+        deviceList,
+        loading,
+        error,
+        refetch: () => {
+            // Optionally implement manual refetch if needed
+        }
+    }), [bluetoothData, bleConfig, deviceList, loading, error]);
+
+    return (
+        <DataContext.Provider value={value}>
+            {children}
+        </DataContext.Provider>
+    );
+};

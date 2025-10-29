@@ -1,8 +1,12 @@
+chatgpt response: pts 4, 5
+claude: 2 6 8
+==================================================================================================================
 URGENT:
-1) that decimal value on dashboard
-2) that pdf changes
+
+2) graph changes : outliers, 100 datapoints
 3) instead of slicing can we add pagination of somekind so if they want they can load more data and we dont crop them of other data
-4) that devices bug still exists
+4) that devices config bug still exists
+7) remove dev mode for error boundary before production
 ==================================================================================================================
 
 1. Admin user creation on client signs out admin — security/logic bug

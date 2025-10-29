@@ -101,13 +101,13 @@ const Layout = () => {
                     </div>
 
                     <div className="flex gap-2">
-                        <button
+                        {/* <button
                             onClick={toggleTheme}
                             className={`flex-1 flex items-center justify-center gap-2 ${colors.inputBg} border ${colors.cardBorder} ${colors.text} px-3 py-2 rounded-lg hover:opacity-80 transition-opacity`}
                             aria-label="Toggle theme"
                         >
                             {isDark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
-                        </button>
+                        </button> */}
 
                         <button
                             onClick={handleLogout}
