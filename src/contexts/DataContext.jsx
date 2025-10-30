@@ -1,5 +1,5 @@
 import React, { createContext, useState, useEffect, useContext, useMemo } from 'react';
-import { collection, query, where, onSnapshot, orderBy } from 'firebase/firestore';
+import { collection, query, where, onSnapshot, orderBy, limit } from 'firebase/firestore';
 import { db } from '../firebase/config';
 import { useAuth } from './AuthContext';
 
@@ -34,11 +34,16 @@ export const DataProvider = ({ children }) => {
         // Subscribe to bluetooth_data collection
         const bluetoothQuery = query(
             collection(db, 'bluetooth_data'),
-            orderBy('data_timestamp', 'desc')
+            orderBy('data_timestamp', 'desc'),
+            limit(5000)
         );
 
         // Subscribe to ble_config collection
-        const configQuery = query(collection(db, 'ble_config'));
+        const configQuery = query(
+            collection(db, 'ble_config'),
+            orderBy('timestamp', 'desc'),
+            limit(1000)
+        );
 
         const unsubscribeBluetoothData = onSnapshot(
             bluetoothQuery,
@@ -97,8 +102,10 @@ export const DataProvider = ({ children }) => {
     // Memoized computed values
     const deviceList = useMemo(() => {
         const devices = new Map();
+
+        // bluetoothData is already sorted by data_timestamp desc, so first occurrence is latest
         bluetoothData.forEach(entry => {
-            if (entry.device_id) {
+            if (entry.device_id && !devices.has(entry.device_id)) {
                 devices.set(entry.device_id, {
                     id: entry.device_id,
                     name: entry.device_name || entry.device_id,
@@ -107,19 +114,35 @@ export const DataProvider = ({ children }) => {
                 });
             }
         });
-        return Array.from(devices.values());
+        
+        return Array.from(devices.values())
+            .sort((a, b) => (b.lastReading || 0) - (a.lastReading || 0)); // Sort by latest reading
     }, [bluetoothData]);
+
+    const latestConfigPerDevice = useMemo(() => {
+        const configMap = new Map();
+
+        // bleConfig is sorted by timestamp desc, so first occurrence is latest
+        bleConfig.forEach(config => {
+            if (config.device_id && !configMap.has(config.device_id)) {
+                configMap.set(config.device_id, config);
+            }
+        });
+
+        return configMap;
+    }, [bleConfig]);
 
     const value = useMemo(() => ({
         bluetoothData,
         bleConfig,
+        latestConfigPerDevice,
         deviceList,
         loading,
         error,
         refetch: () => {
             // Optionally implement manual refetch if needed
         }
-    }), [bluetoothData, bleConfig, deviceList, loading, error]);
+    }), [bluetoothData, bleConfig, latestConfigPerDevice, deviceList, loading, error]);
 
     return (
         <DataContext.Provider value={value}>

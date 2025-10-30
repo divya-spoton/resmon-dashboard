@@ -32,7 +32,7 @@ function AppRoutes() {
         <Route path="dashboard" element={<Dashboard />} />
         <Route path="devices" element={<DevicesPage />} />
         {/* <Route path="alerts" element={<AlertsPage />} /> */}
-        <Route path="device-config" element={<DeviceConfigPage />} />
+        {/* <Route path="device-config" element={<DeviceConfigPage />} /> */}
         <Route path="export" element={
           <PrivateRoute requiredPermission="canExportData">
             <ExportPage />
