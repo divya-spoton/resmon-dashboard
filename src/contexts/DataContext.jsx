@@ -2,6 +2,7 @@ import React, { createContext, useState, useEffect, useContext, useMemo } from '
 import { collection, query, where, onSnapshot, orderBy, limit } from 'firebase/firestore';
 import { db } from '../firebase/config';
 import { useAuth } from './AuthContext';
+import { toDateSafe } from '../utils/firestore';
 
 const DataContext = createContext();
 
@@ -35,7 +36,7 @@ export const DataProvider = ({ children }) => {
         const bluetoothQuery = query(
             collection(db, 'bluetooth_data'),
             orderBy('data_timestamp', 'desc'),
-            limit(5000)
+            limit(3500)
         );
 
         // Subscribe to ble_config collection
@@ -54,12 +55,9 @@ export const DataProvider = ({ children }) => {
                         id: doc.id,
                         ...docData,
                         // Safely convert Firestore timestamps to Date objects
-                        data_timestamp: docData.data_timestamp?.toDate ? docData.data_timestamp.toDate() :
-                            docData.data_timestamp ? new Date(docData.data_timestamp) : null,
-                        timestamp: docData.timestamp?.toDate ? docData.timestamp.toDate() :
-                            docData.timestamp ? new Date(docData.timestamp) : null,
-                        timestamp_upload: docData.timestamp_upload?.toDate ? docData.timestamp_upload.toDate() :
-                            docData.timestamp_upload ? new Date(docData.timestamp_upload) : null,
+                        data_timestamp: toDateSafe(docData.data_timestamp),
+                        timestamp: toDateSafe(docData.timestamp),
+                        timestamp_upload: toDateSafe(docData.timestamp_upload),
                     };
                 });
                 setBluetoothData(data);
@@ -114,7 +112,7 @@ export const DataProvider = ({ children }) => {
                 });
             }
         });
-        
+
         return Array.from(devices.values())
             .sort((a, b) => (b.lastReading || 0) - (a.lastReading || 0)); // Sort by latest reading
     }, [bluetoothData]);

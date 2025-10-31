@@ -29,6 +29,10 @@ const Dashboard = ({ data: propData }) => {
     const [resistanceThresholdMax, setResistanceThresholdMax] = useState('');
     const [outlierPage, setOutlierPage] = useState(1);
     const OUTLIERS_PER_PAGE = 50;
+    // Add next to OUTLIERS_PER_PAGE and other states
+    const READINGS_PER_PAGE = 20;
+    const [tablePage, setTablePage] = useState(1);
+
 
     // UX: collapsible advanced controls
     const [controlsOpen, setControlsOpen] = useState(true);
@@ -85,6 +89,10 @@ const Dashboard = ({ data: propData }) => {
         }
     }, [devices, selectedDevice]);
 
+    useEffect(() => {
+        setTablePage(1);
+    }, [selectedDevice, dateFrom, dateTo]);
+
     // Filter data based on selections
     const filteredData = useMemo(() => {
         let filtered = data || [];
@@ -113,9 +121,12 @@ const Dashboard = ({ data: propData }) => {
     // Table data: newest first, show up to 20 latest readings
     const tableData = useMemo(() => {
         if (!filteredData || filteredData.length === 0) return [];
+
         const sortedDesc = [...filteredData].sort((a, b) => new Date(b.data_timestamp) - new Date(a.data_timestamp));
-        return sortedDesc.slice(0, 20);
-    }, [filteredData]);
+        const maxRows = tablePage * READINGS_PER_PAGE;
+        return sortedDesc.slice(0, maxRows);
+    }, [filteredData, tablePage]);
+
 
     const chartData = useMemo(() => {
         if (!hasDateRange) return [];
@@ -563,6 +574,29 @@ const Dashboard = ({ data: propData }) => {
                             </tbody>
                         </table>
                     </div>
+                    {/* Load more / Show less controls */}
+                    {filteredData && filteredData.length > tablePage * READINGS_PER_PAGE && (
+                        <div className={`px-6 py-4 border-t ${colors.cardBorder} bg-transparent text-center`}>
+                            <button
+                                onClick={() => setTablePage(p => p + 1)}
+                                className="px-4 py-2 rounded-lg transition-colors"
+                            >
+                                Load more ({filteredData.length - tablePage * READINGS_PER_PAGE} remaining)
+                            </button>
+                        </div>
+                    )}
+
+                    {tablePage > 1 && (
+                        <div className="px-6 py-3 text-right">
+                            <button
+                                onClick={() => setTablePage(1)}
+                                className="px-3 py-1 rounded-md border"
+                            >
+                                Show less
+                            </button>
+                        </div>
+                    )}
+
                 </div>
 
             </div>

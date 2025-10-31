@@ -25,26 +25,50 @@ export const AuthProvider = ({ children }) => {
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
+        let mounted = true;
         const unsubscribe = onAuthStateChanged(auth, async (user) => {
-            if (user) {
-                // Fetch user role and permissions from Firestore
-                const userDoc = await getDoc(doc(db, 'users', user.uid));
-                if (userDoc.exists()) {
-                    const userData = userDoc.data();
-                    setUserRole(userData.role);
-                    setPermissions(userData.permissions);
+            try {
+                if (!mounted) return;
+                setLoading(true);
+                if (user) {
+                    const userDoc = await getDoc(doc(db, 'users', user.uid));
+                    if (userDoc.exists()) {
+                        const userData = userDoc.data();
+                        if (!mounted) return;
+                        setUserRole(userData.role || null);
+                        setPermissions(userData.permissions || null);
+                    } else {
+                        if (!mounted) return;
+                        setUserRole(null);
+                        setPermissions(null);
+                    }
+                    if (!mounted) return;
+                    setCurrentUser(user);
+                } else {
+                    if (!mounted) return;
+                    setCurrentUser(null);
+                    setUserRole(null);
+                    setPermissions(null);
                 }
-                setCurrentUser(user);
-            } else {
-                setCurrentUser(null);
-                setUserRole(null);
-                setPermissions(null);
+            } catch (err) {
+                console.error('Auth state error:', err);
+                // optionally set an auth error state here
+                if (mounted) {
+                    setCurrentUser(null);
+                    setUserRole(null);
+                    setPermissions(null);
+                }
+            } finally {
+                if (mounted) setLoading(false);
             }
-            setLoading(false);
         });
 
-        return unsubscribe;
+        return () => {
+            mounted = false;
+            unsubscribe();
+        };
     }, []);
+
 
     const login = async (email, password) => {
         return signInWithEmailAndPassword(auth, email, password);
@@ -132,6 +156,14 @@ export const AuthProvider = ({ children }) => {
 
     return (
         <AuthContext.Provider value={value}>
+            {loading && (
+                <div className="fixed inset-0 flex justify-center items-center z-50">
+                    <div className="flex items-center space-x-2">
+                        <div className="w-8 h-8 border-t-4 border-b-4 border-gray-300 border-solid rounded-full animate-spin"></div>
+                        <span className="text-lg">Authenticating...</span>
+                    </div>
+                </div>
+            )}
             {!loading && children}
         </AuthContext.Provider>
     );

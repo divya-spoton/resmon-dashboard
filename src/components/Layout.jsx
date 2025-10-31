@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
@@ -36,12 +36,14 @@ const Layout = () => {
         // { path: '/users', icon: Users, label: 'User Management', roles: ['admin'] }
     ];
 
-    const filteredNavItems = navItems.filter(item => {
-        if (!userRole) return false;
-        if (!item.roles.includes(userRole)) return false;
-        if (item.permission && (!permissions || !permissions[item.permission])) return false;
-        return true;
-    });
+    const filteredNavItems = useMemo(() => {
+        return navItems.filter(item => {
+            if (!userRole) return false;
+            if (!item.roles.includes(userRole)) return false;
+            if (item.permission && (!permissions || !permissions[item.permission])) return false;
+            return true;
+        });
+    }, [userRole, permissions]);
 
 
     return (

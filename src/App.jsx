@@ -7,15 +7,14 @@ import Layout from './components/Layout';
 import Login from './components/Login';
 import Dashboard from './components/Dashboard';
 import DevicesPage from './pages/DevicesPage';
-// import AlertsPage from './pages/AlertsPage';
 import ExportPage from './pages/ExportPage';
-import DeviceConfigPage from './pages/DeviceConfigPage';
-// import UserManagement from './components/UserManagement';
 import { DataProvider } from './contexts/DataContext';
 import ErrorBoundary from './components/ErrorBoundary';
 
 function AppRoutes() {
-  const { currentUser } = useAuth();
+  const { currentUser, loading } = useAuth();
+
+  if (loading) return <div className="p-6">Loading...</div>;
 
   return (
     <Routes>
