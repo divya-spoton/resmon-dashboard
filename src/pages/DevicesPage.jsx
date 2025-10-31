@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useTheme } from '../contexts/ThemeContext';
-import { Droplets, Battery, Clock, MousePointerClick  } from 'lucide-react';
+import { Droplets, Battery, Clock, MousePointerClick } from 'lucide-react';
 import { useData } from '../contexts/DataContext';
 
 const Loader = () => (
@@ -81,7 +81,7 @@ const DevicesPage = () => {
                     <div className={`mt-4 p-3 rounded-md border ${colors.cardBorder} ${colors.cardBg} flex items-center justify-between gap-4`}>
                         <div className="flex items-center gap-3">
                             <div className="p-2 bg-cyan-50 rounded-md">
-                                <MousePointerClick  className="w-5 h-5 text-cyan-500" />
+                                <MousePointerClick className="w-5 h-5 text-cyan-500" />
                             </div>
                             <div className="text-sm">
                                 <div className={`font-medium ${colors.text}`}>Tip: Click any device card to expand and see configuration + recent readings</div>
@@ -121,7 +121,7 @@ const DevicesPage = () => {
                                 {/* Small helper badge shown while the one-time hint is visible */}
                                 {showHint && !selectedDevice && (
                                     <div className="absolute top-3 right-3 flex items-center gap-2 bg-cyan-50/80 backdrop-blur-sm px-2 py-1 rounded-full text-xs font-medium">
-                                        <MousePointerClick  className="w-4 h-4 text-cyan-500" />
+                                        <MousePointerClick className="w-4 h-4 text-cyan-500" />
                                         <span className="animate-pulse">Click to expand</span>
                                     </div>
                                 )}
@@ -344,7 +344,7 @@ const DevicesPage = () => {
                                                     <SafeNumber value={record.data_metal_loss} fixed={3} suffix=" mils" />
                                                 </td>
                                                 <td className={`px-6 py-4 whitespace-nowrap text-sm ${colors.textTertiary}`}>
-                                                    {record.data_probe_resistance !== undefined && record.data_probe_resistance !== null ? Number(record.data_probe_resistance).toFixed(2) + ' Ω' : '—'}
+                                                    {record.data_probe_resistance !== undefined && record.data_probe_resistance !== null ? Number(record.data_probe_resistance).toFixed(3) : '—'}
                                                 </td>
                                                 <td className={`px-6 py-4 whitespace-nowrap text-sm ${colors.textTertiary}`}><SafeNumber value={record.data_battery_percentage} suffix="%" /></td>
                                             </tr>

@@ -377,12 +377,12 @@ const Dashboard = ({ data: propData }) => {
                             </div>
 
                             <div className="flex-1 min-w-[180px]">
-                                <label className={`block text-sm font-medium ${colors.textTertiary} mb-2`}>Min Resistance (Ω)</label>
+                                <label className={`block text-sm font-medium ${colors.textTertiary} mb-2`}>Min Expo Units</label>
                                 <input type="number" step="0.01" value={resistanceThresholdMin} onChange={(e) => setResistanceThresholdMin(e.target.value)} placeholder="e.g., 10.00" className={`w-full ${colors.inputBg} border ${colors.inputBorder} ${colors.text} rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-amber-500`} />
                             </div>
 
                             <div className="flex-1 min-w-[180px]">
-                                <label className={`block text-sm font-medium ${colors.textTertiary} mb-2`}>Max Resistance (Ω)</label>
+                                <label className={`block text-sm font-medium ${colors.textTertiary} mb-2`}>Max Expo Units</label>
                                 <input type="number" step="0.01" value={resistanceThresholdMax} onChange={(e) => setResistanceThresholdMax(e.target.value)} placeholder="e.g., 1000.00" className={`w-full ${colors.inputBg} border ${colors.inputBorder} ${colors.text} rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-amber-500`} />
                             </div>
                         </div>
@@ -444,7 +444,7 @@ const Dashboard = ({ data: propData }) => {
                                 </div>
 
                                 <div className={`${colors.cardBg} backdrop-blur-sm border ${colors.cardBorder} rounded-xl p-6`}>
-                                    <h3 className={`text-lg font-semibold ${colors.text} mb-2`}>Probe Resistance Trend</h3>
+                                    <h3 className={`text-lg font-semibold ${colors.text} mb-2`}>Probe Units Trend</h3>
                                     {(resistanceThresholdMin || resistanceThresholdMax) && (<p className="text-xs text-amber-400 mb-3">🎯 Range: {resistanceThresholdMin || '—'} - {resistanceThresholdMax || '—'} Ω (red dots = outliers)</p>)}
 
                                     <ResponsiveContainer width="100%" height={300}>
@@ -468,7 +468,7 @@ const Dashboard = ({ data: propData }) => {
                                                     );
                                                 }
                                                 return <circle key={`dot-res-${key}`} cx={cx} cy={cy} r={3} fill="#f59e0b" />;
-                                            }} name="Resistance" />
+                                            }} name="Expo Units" />
                                         </LineChart>
                                     </ResponsiveContainer>
                                 </div>
