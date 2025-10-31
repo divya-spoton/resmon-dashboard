@@ -198,10 +198,10 @@ const DevicesPage = () => {
                                                 <span className={colors.textSecondary}>Span: </span>
                                                 <span className={colors.text}>{device.config.span_mils ?? '—'} mils</span>
                                             </div>
-                                            <div>
+                                            {/* <div>
                                                 <span className={colors.textSecondary}>Cycle Time: </span>
                                                 <span className={colors.text}>{device.config.cycle_time ?? '—'} sec</span>
-                                            </div>
+                                            </div> */}
                                             <div>
                                                 <span className={colors.textSecondary}>Element 1: </span>
                                                 <span className={colors.text}>{device.config.element?.element_1 ?? '—'}</span>
