@@ -1,6 +1,6 @@
 import React from 'react';
 import { TrendingUp, AlertCircle, Battery, Calendar, Activity } from 'lucide-react';
-import { useTheme } from '../contexts/ThemeContext';
+import { useTheme } from '../../contexts/ThemeContext';
 
 // Small presentational stat card used inside the main grid
 const StatCard = ({ Icon, label, value, unit, hint, accentClass, colors }) => {

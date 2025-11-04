@@ -5,7 +5,7 @@ import { ThemeProvider } from './contexts/ThemeContext';
 import PrivateRoute from './routes/PrivateRoute';
 import Layout from './components/Layout';
 import Login from './components/Login';
-import Dashboard from './components/Dashboard';
+import Dashboard from './pages/Dashboard';
 import DevicesPage from './pages/DevicesPage';
 import ExportPage from './pages/ExportPage';
 import { DataProvider } from './contexts/DataContext';
@@ -30,18 +30,11 @@ function AppRoutes() {
         <Route index element={<Navigate to="/dashboard" replace />} />
         <Route path="dashboard" element={<Dashboard />} />
         <Route path="devices" element={<DevicesPage />} />
-        {/* <Route path="alerts" element={<AlertsPage />} /> */}
-        {/* <Route path="device-config" element={<DeviceConfigPage />} /> */}
         <Route path="export" element={
           <PrivateRoute requiredPermission="canExportData">
             <ExportPage />
           </PrivateRoute>
         } />
-        {/* <Route path="users" element={
-          <PrivateRoute requiredRole="admin">
-            <UserManagement />
-          </PrivateRoute>
-        } /> */}
       </Route>
       <Route path="*" element={<Navigate to="/dashboard" replace />} />
     </Routes>
