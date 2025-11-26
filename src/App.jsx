@@ -10,6 +10,7 @@ import DevicesPage from './pages/DevicesPage';
 import ExportPage from './pages/ExportPage';
 import { DataProvider } from './contexts/DataContext';
 import ErrorBoundary from './components/ErrorBoundary';
+import { Analytics } from '@vercel/analytics/react';
 
 function AppRoutes() {
   const { currentUser, loading } = useAuth();
@@ -49,6 +50,7 @@ function App() {
           <AuthProvider>
             <DataProvider>
               <AppRoutes />
+              <Analytics />
             </DataProvider>
           </AuthProvider>
         </ThemeProvider>
